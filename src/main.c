@@ -35,11 +35,24 @@ int main(int argc, char **argv)
 #endif
 
     VkInstance instance = createInstance();
-    VkPhysicalDevice physicalDevice = sellectPhysicalDevice(instance);
-    uint32_t graphicsQueueFamilyIndex = findGraphicsQueueFamily(physicalDevice);
-    VkDevice device = createLogicalDevice(physicalDevice, graphicsQueueFamilyIndex);
+
+    VkSurfaceKHR surface;
+    handleVkResult(
+        glfwCreateWindowSurface(instance, window, NULL, &surface),
+        "creating surface");
+
+    VkPhysicalDevice physicalDevice;
+    QueueFamilies queueFamilies;
+    sellectPhysicalDevice(instance, surface, &physicalDevice, &queueFamilies);
+
+    VkDevice device = createLogicalDevice(
+        physicalDevice,
+        queueFamilies);
+
     VkQueue graphicsQueue;
-    vkGetDeviceQueue(device, graphicsQueueFamilyIndex, 0, &graphicsQueue);
+    vkGetDeviceQueue(device, queueFamilies.graphicsFamily, 0, &graphicsQueue);
+    VkQueue presentQueue;
+    vkGetDeviceQueue(device, queueFamilies.presentFamily, 0, &presentQueue);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -47,6 +60,7 @@ int main(int argc, char **argv)
     }
 
     vkDestroyDevice(device, NULL);
+    vkDestroySurfaceKHR(instance, surface, NULL);
     vkDestroyInstance(instance, NULL);
 
     glfwDestroyWindow(window);

@@ -5,10 +5,23 @@
 
 #include <vulkan/vulkan.h>
 
+typedef struct
+{
+    uint32_t graphicsFamily;
+    uint32_t presentFamily;
+} QueueFamilies;
+
 bool checkValidationLayerSupport(void);
 VkInstance createInstance(void);
-VkPhysicalDevice sellectPhysicalDevice(VkInstance instance);
-uint32_t findGraphicsQueueFamily(VkPhysicalDevice physicalDevice);
-VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, uint32_t graphicsQueueFamilyIndex);
+
+void sellectPhysicalDevice(
+    VkInstance instance,
+    VkSurfaceKHR surface,
+    VkPhysicalDevice *physicalDevice,
+    QueueFamilies *queueFamilies);
+
+QueueFamilies findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
+
+VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, QueueFamilies queueFamilies);
 
 #endif

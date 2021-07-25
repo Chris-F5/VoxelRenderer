@@ -88,17 +88,24 @@ VkInstance createInstance(void)
     return instance;
 }
 
-bool isDeviceSuitable(VkPhysicalDevice physicalDevice)
+bool isDeviceSuitable(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, QueueFamilies *queueFamilies)
 {
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(physicalDevice, &properties);
     VkPhysicalDeviceFeatures features;
     vkGetPhysicalDeviceFeatures(physicalDevice, &features);
 
+    *queueFamilies = findQueueFamilies(physicalDevice, surface);
+    if (queueFamilies->graphicsFamily == QUEUE_FAMILY_DOES_NOT_EXIST ||
+        queueFamilies->presentFamily == QUEUE_FAMILY_DOES_NOT_EXIST)
+    {
+        return false;
+    }
+
     return true;
 }
 
-VkPhysicalDevice sellectPhysicalDevice(VkInstance instance)
+void sellectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice *physicalDevice, QueueFamilies *queueFamilies)
 {
     uint32_t physicalDeviceCount;
     handleVkResult(
@@ -114,13 +121,21 @@ VkPhysicalDevice sellectPhysicalDevice(VkInstance instance)
         vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, physicalDevices),
         "enumerating physical devices");
 
-    VkPhysicalDevice physicalDevice = physicalDevices[0];
-    free(physicalDevices);
+    for (uint32_t i = 0; i < physicalDeviceCount; i++)
+    {
+        if (isDeviceSuitable(physicalDevices[i], surface, queueFamilies))
+        {
+            *physicalDevice = physicalDevices[0];
+            free(physicalDevices);
+            return;
+        }
+    }
 
-    return physicalDevice;
+    puts("Exiting because could not find suitable GPU");
+    exit(EXIT_FAILURE);
 }
 
-uint32_t findGraphicsQueueFamily(VkPhysicalDevice physicalDevice)
+QueueFamilies findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
 {
     uint32_t queueFamilyCount;
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, NULL);
@@ -134,30 +149,52 @@ uint32_t findGraphicsQueueFamily(VkPhysicalDevice physicalDevice)
     VkQueueFamilyProperties *queueFamilies = (VkQueueFamilyProperties *)malloc(sizeof(VkQueueFamilyProperties) * queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies);
 
-    uint32_t graphicsFamilyIndex = QUEUE_FAMILY_DOES_NOT_EXIST;
+    QueueFamilies importantQueueFamilies;
+    importantQueueFamilies.graphicsFamily = QUEUE_FAMILY_DOES_NOT_EXIST;
+    importantQueueFamilies.presentFamily = QUEUE_FAMILY_DOES_NOT_EXIST;
 
     for (uint32_t i = 0; i < queueFamilyCount; i++)
     {
         if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
-            graphicsFamilyIndex = i;
-        }
+            importantQueueFamilies.graphicsFamily = i;
+        VkBool32 presentSupport;
+        vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
+        if (presentSupport)
+            importantQueueFamilies.presentFamily = i;
     }
     free(queueFamilies);
-    return graphicsFamilyIndex;
+    return importantQueueFamilies;
 }
 
-VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, uint32_t graphicsQueueFamilyIndex)
+VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, QueueFamilies queueFamilies)
 {
-    float graphicsQueuePriority = 1.0;
+    uint32_t queueFamilyCount;
+    uint32_t queueFamilyIndices[2];
 
-    VkDeviceQueueCreateInfo graphicsQueueCreateInfo;
-    graphicsQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    graphicsQueueCreateInfo.pNext = NULL;
-    graphicsQueueCreateInfo.flags = 0;
-    graphicsQueueCreateInfo.queueFamilyIndex = graphicsQueueFamilyIndex;
-    graphicsQueueCreateInfo.queueCount = 1;
-    graphicsQueueCreateInfo.pQueuePriorities = &graphicsQueuePriority;
+    if (queueFamilies.graphicsFamily == queueFamilies.presentFamily)
+    {
+        queueFamilyCount = 1;
+        queueFamilyIndices[0] = queueFamilies.graphicsFamily;
+    }
+    else
+    {
+        queueFamilyCount = 2;
+        queueFamilyIndices[0] = queueFamilies.graphicsFamily;
+        queueFamilyIndices[1] = queueFamilies.presentFamily;
+    }
+
+    VkDeviceQueueCreateInfo *queueCreateInfos = (VkDeviceQueueCreateInfo *)malloc(sizeof(VkDeviceQueueCreateInfo) * queueFamilyCount);
+
+    float generalQueuePriority = 1.0;
+    for (uint32_t i = 0; i < queueFamilyCount; i++)
+    {
+        queueCreateInfos[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfos[i].pNext = NULL;
+        queueCreateInfos[i].flags = 0;
+        queueCreateInfos[i].queueFamilyIndex = queueFamilyIndices[i];
+        queueCreateInfos[i].queueCount = 1;
+        queueCreateInfos[i].pQueuePriorities = &generalQueuePriority;
+    }
 
     VkPhysicalDeviceFeatures deviceFeatures;
     memset(&deviceFeatures, 0, sizeof(deviceFeatures));
@@ -166,8 +203,8 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, uint32_t graphicsQ
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     deviceCreateInfo.pNext = NULL;
     deviceCreateInfo.flags = 0;
-    deviceCreateInfo.queueCreateInfoCount = 1;
-    deviceCreateInfo.pQueueCreateInfos = &graphicsQueueCreateInfo;
+    deviceCreateInfo.queueCreateInfoCount = queueFamilyCount;
+    deviceCreateInfo.pQueueCreateInfos = queueCreateInfos;
     if (validationLayersEnabled)
     {
         deviceCreateInfo.enabledLayerCount = sizeof(VALIDATION_LAYERS) / sizeof(VALIDATION_LAYERS[0]);
