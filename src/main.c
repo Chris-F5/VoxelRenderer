@@ -7,6 +7,7 @@
 
 #include "vk/device.h"
 #include "vk/exceptions.h"
+#include "vk/swapchain.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -42,22 +43,26 @@ int main(int argc, char **argv)
         "creating surface");
 
     VkPhysicalDevice physicalDevice;
-    QueueFamilies queueFamilies;
-    sellectPhysicalDevice(instance, surface, &physicalDevice, &queueFamilies);
+    PhysicalDeviceProperties physicalDeviceProperties;
+    sellectPhysicalDevice(instance, surface, &physicalDevice, &physicalDeviceProperties);
 
     VkDevice device = createLogicalDevice(
         physicalDevice,
-        queueFamilies);
+        physicalDeviceProperties);
 
     VkQueue graphicsQueue;
-    vkGetDeviceQueue(device, queueFamilies.graphicsFamily, 0, &graphicsQueue);
+    vkGetDeviceQueue(device, physicalDeviceProperties.graphicsFamilyIndex, 0, &graphicsQueue);
     VkQueue presentQueue;
-    vkGetDeviceQueue(device, queueFamilies.presentFamily, 0, &presentQueue);
+    vkGetDeviceQueue(device, physicalDeviceProperties.presentFamilyIndex, 0, &presentQueue);
+
+    Swapchain swapchain = createSwapchain(device, physicalDevice, physicalDeviceProperties, window, surface);
 
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
     }
+
+    cleanupSwapchain(device, swapchain);
 
     vkDestroyDevice(device, NULL);
     vkDestroySurfaceKHR(instance, surface, NULL);

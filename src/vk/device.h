@@ -7,9 +7,13 @@
 
 typedef struct
 {
-    uint32_t graphicsFamily;
-    uint32_t presentFamily;
-} QueueFamilies;
+    uint32_t graphicsFamilyIndex;
+    uint32_t presentFamilyIndex;
+    VkSurfaceCapabilitiesKHR surfaceCapabilities;
+    VkSurfaceFormatKHR surfaceFormat;
+    VkPresentModeKHR presentMode;
+
+} PhysicalDeviceProperties;
 
 bool checkValidationLayerSupport(void);
 VkInstance createInstance(void);
@@ -18,10 +22,10 @@ void sellectPhysicalDevice(
     VkInstance instance,
     VkSurfaceKHR surface,
     VkPhysicalDevice *physicalDevice,
-    QueueFamilies *queueFamilies);
+    PhysicalDeviceProperties *physicalDeviceProperties);
 
-QueueFamilies findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
-
-VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, QueueFamilies queueFamilies);
+VkDevice createLogicalDevice(
+    VkPhysicalDevice physicalDevice,
+    PhysicalDeviceProperties physicalDeviceProperties);
 
 #endif

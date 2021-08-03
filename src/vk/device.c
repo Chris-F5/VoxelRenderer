@@ -19,19 +19,26 @@ extern bool validationLayersEnabled;
 const char *VALIDATION_LAYERS[] = {
     "VK_LAYER_KHRONOS_validation"};
 
+const char *REQUIRED_DEVICE_EXTENSIONS[] = {
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+
 bool checkValidationLayerSupport(void)
 {
     uint32_t availableLayerCount;
-    vkEnumerateInstanceLayerProperties(&availableLayerCount, NULL);
+    handleVkResult(
+        vkEnumerateInstanceLayerProperties(&availableLayerCount, NULL),
+        "getting instance layer properties count to check for validation layer support");
     VkLayerProperties *availableLayers = (VkLayerProperties *)malloc(sizeof(VkLayerProperties) * availableLayerCount);
-    vkEnumerateInstanceLayerProperties(&availableLayerCount, availableLayers);
+    handleVkResult(
+        vkEnumerateInstanceLayerProperties(&availableLayerCount, availableLayers),
+        "getting instance layer properties to check for validation layer support");
 
     const int validationLayerCount = sizeof(VALIDATION_LAYERS) / sizeof(VALIDATION_LAYERS[0]);
     for (int vi = 0; vi < validationLayerCount; vi++)
     {
         bool layerFound = false;
-        for (int li = 0; li < availableLayerCount; li++)
-            if (strcmp(VALIDATION_LAYERS[vi], availableLayers[li].layerName) == 0)
+        for (int ai = 0; ai < availableLayerCount; ai++)
+            if (strcmp(VALIDATION_LAYERS[vi], availableLayers[ai].layerName) == 0)
             {
                 layerFound = true;
                 break;
@@ -83,29 +90,165 @@ VkInstance createInstance(void)
     }
 
     VkInstance instance;
-    handleVkResult(vkCreateInstance(&createInfo, NULL, &instance), "creating vk instance");
+    handleVkResult(
+        vkCreateInstance(&createInfo, NULL, &instance),
+        "creating vk instance");
 
     return instance;
 }
 
-bool isDeviceSuitable(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, QueueFamilies *queueFamilies)
+bool checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice)
 {
-    VkPhysicalDeviceProperties properties;
-    vkGetPhysicalDeviceProperties(physicalDevice, &properties);
-    VkPhysicalDeviceFeatures features;
-    vkGetPhysicalDeviceFeatures(physicalDevice, &features);
+    uint32_t availableExtensionCount;
+    handleVkResult(
+        vkEnumerateDeviceExtensionProperties(physicalDevice, NULL, &availableExtensionCount, NULL),
+        "getting physical device extension count to check for physical device extension support");
+    VkExtensionProperties *availableExtensions =
+        (VkExtensionProperties *)malloc(sizeof(VkExtensionProperties) * availableExtensionCount);
+    handleVkResult(
+        vkEnumerateDeviceExtensionProperties(physicalDevice, NULL, &availableExtensionCount, availableExtensions),
+        "getting physical device extensions to check for physical device extension support");
 
-    *queueFamilies = findQueueFamilies(physicalDevice, surface);
-    if (queueFamilies->graphicsFamily == QUEUE_FAMILY_DOES_NOT_EXIST ||
-        queueFamilies->presentFamily == QUEUE_FAMILY_DOES_NOT_EXIST)
+    for (uint32_t ri = 0; ri < sizeof(REQUIRED_DEVICE_EXTENSIONS) / sizeof(REQUIRED_DEVICE_EXTENSIONS[0]); ri++)
     {
-        return false;
+        bool layerFound = false;
+        for (uint32_t ai = 0; ai < availableExtensionCount; ai++)
+            if (strcmp(REQUIRED_DEVICE_EXTENSIONS[ri], availableExtensions[ai].extensionName) == 0)
+            {
+                layerFound = true;
+                break;
+            }
+        if (!layerFound)
+        {
+            free(availableExtensions);
+            return false;
+        }
     }
+    free(availableExtensions);
+    return true;
+}
+
+bool chooseSwapchainSurfaceFormat(
+    uint32_t availableFormatCount,
+    VkSurfaceFormatKHR *availableFormats,
+    VkSurfaceFormatKHR *chosenFormat)
+{
+    for (uint32_t i = 0; i < availableFormatCount; i++)
+        if (
+            availableFormats[i].format == VK_FORMAT_B8G8R8A8_SRGB &&
+            availableFormats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        {
+            *chosenFormat = availableFormats[i];
+            return true;
+        }
+    return false;
+}
+
+bool chooseSwapchainPresentMode(
+    uint32_t availablePresentModeCount,
+    VkPresentModeKHR *availablePresentModes,
+    VkPresentModeKHR *chosenPresentMode)
+{
+    for (uint32_t i = 0; i < availablePresentModeCount; i++)
+        if (availablePresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
+        {
+            *chosenPresentMode = availablePresentModes[i];
+            return true;
+        }
+    for (uint32_t i = 0; i < availablePresentModeCount; i++)
+        if (availablePresentModes[i] == VK_PRESENT_MODE_FIFO_KHR)
+        {
+            *chosenPresentMode = availablePresentModes[i];
+            return true;
+        }
+    return false;
+}
+
+// return true if physical device is suitable
+bool getPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, PhysicalDeviceProperties *physicalDeviceProperties)
+{
+    // QUEUE FAMILIES
+
+    uint32_t queueFamilyCount;
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, NULL);
+
+    VkQueueFamilyProperties *queueFamilies = (VkQueueFamilyProperties *)malloc(sizeof(VkQueueFamilyProperties) * queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies);
+
+    bool foundGraphicsFamily = false;
+    bool foundPresentFamily = false;
+
+    for (uint32_t i = 0; i < queueFamilyCount; i++)
+    {
+        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
+            physicalDeviceProperties->graphicsFamilyIndex = i;
+            foundGraphicsFamily = true;
+        }
+        VkBool32 presentSupport;
+        handleVkResult(
+            vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport),
+            "checking queue family surface support to see if its suitable for a present family");
+        if (presentSupport)
+        {
+            physicalDeviceProperties->presentFamilyIndex = i;
+            foundPresentFamily = true;
+        }
+    }
+
+    if (!foundGraphicsFamily || !foundPresentFamily)
+        return false;
+
+    free(queueFamilies);
+
+    // EXTENSIONS
+
+    if (!checkDeviceExtensionSupport(physicalDevice))
+        return false;
+
+    // SURFACE CAPABILITIES
+
+    handleVkResult(
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &physicalDeviceProperties->surfaceCapabilities),
+        "getting physical device surface capabilities");
+
+    // SURFACE FORMATS
+
+    uint32_t surfaceFormatCount;
+    handleVkResult(
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfaceFormatCount, NULL),
+        "getting physical device surface formats count");
+    VkSurfaceFormatKHR *surfaceFormats =
+        (VkSurfaceFormatKHR *)malloc(sizeof(VkSurfaceFormatKHR) * surfaceFormatCount);
+    handleVkResult(
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfaceFormatCount, surfaceFormats),
+        "getting physical device surface formats");
+
+    if (!chooseSwapchainSurfaceFormat(surfaceFormatCount, surfaceFormats, &physicalDeviceProperties->surfaceFormat))
+        return false;
+
+    // PRESENT MODES
+
+    uint32_t presentModeCount;
+    handleVkResult(
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, NULL),
+        "getting surface present modes count for swapchain creation");
+    VkPresentModeKHR *presentModes = (VkPresentModeKHR *)malloc(sizeof(VkPresentModeKHR) * presentModeCount);
+    handleVkResult(
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes),
+        "getting surface present modes for swapchain creation");
+
+    if (!chooseSwapchainPresentMode(presentModeCount, presentModes, &physicalDeviceProperties->presentMode))
+        return false;
 
     return true;
 }
 
-void sellectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice *physicalDevice, QueueFamilies *queueFamilies)
+void sellectPhysicalDevice(
+    VkInstance instance,
+    VkSurfaceKHR surface,
+    VkPhysicalDevice *physicalDevice,
+    PhysicalDeviceProperties *physicalDeviceProperties)
 {
     uint32_t physicalDeviceCount;
     handleVkResult(
@@ -123,64 +266,34 @@ void sellectPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysical
 
     for (uint32_t i = 0; i < physicalDeviceCount; i++)
     {
-        if (isDeviceSuitable(physicalDevices[i], surface, queueFamilies))
+        if (getPhysicalDeviceProperties(physicalDevices[i], surface, physicalDeviceProperties))
         {
-            *physicalDevice = physicalDevices[0];
+            *physicalDevice = physicalDevices[i];
             free(physicalDevices);
             return;
         }
     }
+    free(physicalDevices);
 
     puts("Exiting because could not find suitable GPU");
     exit(EXIT_FAILURE);
 }
 
-QueueFamilies findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
-{
-    uint32_t queueFamilyCount;
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, NULL);
-
-    if (queueFamilyCount == UINT32_MAX)
-    {
-        puts("Exiting because physical device claims to have UINT32_MAX queue families.");
-        exit(EXIT_FAILURE);
-    }
-
-    VkQueueFamilyProperties *queueFamilies = (VkQueueFamilyProperties *)malloc(sizeof(VkQueueFamilyProperties) * queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies);
-
-    QueueFamilies importantQueueFamilies;
-    importantQueueFamilies.graphicsFamily = QUEUE_FAMILY_DOES_NOT_EXIST;
-    importantQueueFamilies.presentFamily = QUEUE_FAMILY_DOES_NOT_EXIST;
-
-    for (uint32_t i = 0; i < queueFamilyCount; i++)
-    {
-        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            importantQueueFamilies.graphicsFamily = i;
-        VkBool32 presentSupport;
-        vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
-        if (presentSupport)
-            importantQueueFamilies.presentFamily = i;
-    }
-    free(queueFamilies);
-    return importantQueueFamilies;
-}
-
-VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, QueueFamilies queueFamilies)
+VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, PhysicalDeviceProperties physicalDeviceProperties)
 {
     uint32_t queueFamilyCount;
     uint32_t queueFamilyIndices[2];
 
-    if (queueFamilies.graphicsFamily == queueFamilies.presentFamily)
+    if (physicalDeviceProperties.graphicsFamilyIndex == physicalDeviceProperties.presentFamilyIndex)
     {
         queueFamilyCount = 1;
-        queueFamilyIndices[0] = queueFamilies.graphicsFamily;
+        queueFamilyIndices[0] = physicalDeviceProperties.graphicsFamilyIndex;
     }
     else
     {
         queueFamilyCount = 2;
-        queueFamilyIndices[0] = queueFamilies.graphicsFamily;
-        queueFamilyIndices[1] = queueFamilies.presentFamily;
+        queueFamilyIndices[0] = physicalDeviceProperties.graphicsFamilyIndex;
+        queueFamilyIndices[1] = physicalDeviceProperties.presentFamilyIndex;
     }
 
     VkDeviceQueueCreateInfo *queueCreateInfos = (VkDeviceQueueCreateInfo *)malloc(sizeof(VkDeviceQueueCreateInfo) * queueFamilyCount);
@@ -215,8 +328,8 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, QueueFamilies queu
         deviceCreateInfo.enabledLayerCount = 0;
         deviceCreateInfo.ppEnabledLayerNames = NULL;
     }
-    deviceCreateInfo.enabledExtensionCount = 0;
-    deviceCreateInfo.ppEnabledExtensionNames = NULL;
+    deviceCreateInfo.enabledExtensionCount = sizeof(REQUIRED_DEVICE_EXTENSIONS) / sizeof(REQUIRED_DEVICE_EXTENSIONS[0]);
+    deviceCreateInfo.ppEnabledExtensionNames = REQUIRED_DEVICE_EXTENSIONS;
     deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
     VkDevice device;
