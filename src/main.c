@@ -8,6 +8,8 @@
 #include "vk/device.h"
 #include "vk/exceptions.h"
 #include "vk/swapchain.h"
+#include "vk/shader_module.h"
+#include "vk/graphics_pipeline.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -57,11 +59,20 @@ int main(int argc, char **argv)
 
     Swapchain swapchain = createSwapchain(device, physicalDevice, physicalDeviceProperties, window, surface);
 
+    VkShaderModule vertShader = createShaderModule(device, "shader.vert.spv");
+    VkShaderModule fragShader = createShaderModule(device, "shader.frag.spv");
+
+    GraphicsPipeline pipeline = createGraphicsPipeline(device, swapchain, vertShader, fragShader);
+
+    vkDestroyShaderModule(device, vertShader, NULL);
+    vkDestroyShaderModule(device, fragShader, NULL);
+
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
     }
 
+    cleanupGraphicsPipeline(device, pipeline);
     cleanupSwapchain(device, swapchain);
 
     vkDestroyDevice(device, NULL);

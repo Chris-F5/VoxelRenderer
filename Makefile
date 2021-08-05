@@ -7,11 +7,11 @@ HEADERS = $(shell find ./src -type f -name "*.h")
 OBJS = $(patsubst ./src/%.c, obj/%.o, $(SRCS))
 DEPENDS = $(patsubst ./src/%.c, obj/%.d,$(SRCS))
 
--include $(DEPENDS)
-
 .PHONY: run clean all
 
-all: target/$(OUTPUTNAME)
+all: target/$(OUTPUTNAME) target/shader.vert.spv target/shader.frag.spv
+
+-include $(DEPENDS)
 
 target/$(OUTPUTNAME): $(OBJS) $(HEADERS)
 	mkdir -p target
@@ -21,7 +21,7 @@ obj/%.o: src/%.c
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@ $(LDFLAGS)
 
-target/%.spv: src/%.comp
+target/%.spv: src/%
 	glslc $< -o $@
 
 run: all
