@@ -67,10 +67,33 @@ int main(int argc, char **argv)
     vkDestroyShaderModule(device, vertShader, NULL);
     vkDestroyShaderModule(device, fragShader, NULL);
 
+    VkFramebuffer *framebuffers = (VkFramebuffer *)malloc(swapchain.imageCount * sizeof(VkFramebuffer));
+    for (int i = 0; i < swapchain.imageCount; i++)
+    {
+        VkFramebufferCreateInfo framebufferCreateInfo;
+        framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferCreateInfo.pNext = NULL;
+        framebufferCreateInfo.flags = 0;
+        framebufferCreateInfo.renderPass = pipeline.renderPass;
+        framebufferCreateInfo.attachmentCount = 1;
+        framebufferCreateInfo.pAttachments = &swapchain.imageViews[i];
+        framebufferCreateInfo.width = swapchain.extent.width;
+        framebufferCreateInfo.height = swapchain.extent.height;
+        framebufferCreateInfo.layers = 1;
+
+        handleVkResult(
+            vkCreateFramebuffer(device, &framebufferCreateInfo, NULL, &framebuffers[i]),
+            "creating framebuffer");
+    }
+
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
     }
+
+    for (int i = 0; i < swapchain.imageCount; i++)
+        vkDestroyFramebuffer(device, framebuffers[i], NULL);
+    free(framebuffers);
 
     cleanupGraphicsPipeline(device, pipeline);
     cleanupSwapchain(device, swapchain);
