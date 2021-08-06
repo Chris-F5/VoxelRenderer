@@ -10,6 +10,7 @@
 #include "vk/swapchain.h"
 #include "vk/shader_module.h"
 #include "vk/graphics_pipeline.h"
+#include "vk/command_buffer.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -86,10 +87,18 @@ int main(int argc, char **argv)
             "creating framebuffer");
     }
 
+    VkCommandPool graphicsCommandPool = createCommandPool(device, 0, physicalDeviceProperties.graphicsFamilyIndex);
+
+    VkCommandBuffer *commandBuffers = (VkCommandBuffer *)malloc(swapchain.imageCount * sizeof(VkCommandBuffer));
+    allocateCommandBuffers(device, graphicsCommandPool, swapchain.imageCount, commandBuffers);
+    recordRenderCommandBuffers(pipeline.renderPass, swapchain.extent, pipeline.pipeline, swapchain.imageCount, commandBuffers, framebuffers);
+
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
     }
+
+    vkDestroyCommandPool(device, graphicsCommandPool, NULL);
 
     for (int i = 0; i < swapchain.imageCount; i++)
         vkDestroyFramebuffer(device, framebuffers[i], NULL);
