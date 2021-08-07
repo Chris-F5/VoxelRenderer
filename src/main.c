@@ -93,10 +93,65 @@ int main(int argc, char **argv)
     allocateCommandBuffers(device, graphicsCommandPool, swapchain.imageCount, commandBuffers);
     recordRenderCommandBuffers(pipeline.renderPass, swapchain.extent, pipeline.pipeline, swapchain.imageCount, commandBuffers, framebuffers);
 
+    VkSemaphoreCreateInfo semaphoreCreateInfo;
+    semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    semaphoreCreateInfo.pNext = NULL;
+    semaphoreCreateInfo.flags = 0;
+
+    VkSemaphore imageAvailableSemaphore;
+    VkSemaphore renderFinishedSemaphore;
+    handleVkResult(
+        vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &imageAvailableSemaphore),
+        "creating image available semaphore");
+    handleVkResult(
+        vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &renderFinishedSemaphore),
+        "creating render finished semaphore");
+
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
+        uint32_t imageIndex;
+        handleVkResult(
+            vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex),
+            "acquiring next swapchain image");
+
+        VkSubmitInfo submitInfo;
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.pNext = NULL;
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = &imageAvailableSemaphore;
+        VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        submitInfo.pWaitDstStageMask = &waitStage;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
+
+        handleVkResult(
+            vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE),
+            "submitting render command buffer");
+
+        VkPresentInfoKHR presentInfo;
+        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        presentInfo.pNext = NULL;
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = &renderFinishedSemaphore;
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = &swapchain.swapchain;
+        presentInfo.pImageIndices = &imageIndex;
+        presentInfo.pResults = NULL;
+
+        handleVkResult(
+            vkQueuePresentKHR(presentQueue, &presentInfo),
+            "submitting present call");
+
+        vkDeviceWaitIdle(device);
     }
+
+    vkDeviceWaitIdle(device);
+
+    vkDestroySemaphore(device, imageAvailableSemaphore, NULL);
+    vkDestroySemaphore(device, renderFinishedSemaphore, NULL);
 
     vkDestroyCommandPool(device, graphicsCommandPool, NULL);
 

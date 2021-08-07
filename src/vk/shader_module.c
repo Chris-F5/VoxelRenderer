@@ -14,7 +14,7 @@ void readFile(char *fileName, long *fileLength, char **fileBytes)
         *fileLength = ftell(file);
         fseek(file, 0, SEEK_SET);
 
-        *fileBytes = malloc(*fileLength);
+        *fileBytes = (char *)malloc(*fileLength);
         fread(*fileBytes, 1, *fileLength, file);
 
         fclose(file);

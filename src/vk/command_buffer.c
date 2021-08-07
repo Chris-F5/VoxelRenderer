@@ -63,6 +63,14 @@ void recordRenderCommandBuffers(
         clearColor.color.float32[1] = 0.0;
         clearColor.color.float32[2] = 0.0;
         clearColor.color.float32[3] = 1.0;
+        clearColor.color.int32[0] = 0;
+        clearColor.color.int32[1] = 0;
+        clearColor.color.int32[2] = 0;
+        clearColor.color.int32[3] = 0;
+        clearColor.color.uint32[0] = 0;
+        clearColor.color.uint32[1] = 0;
+        clearColor.color.uint32[2] = 0;
+        clearColor.color.uint32[3] = 0;
         clearColor.depthStencil.depth = 0.0;
         clearColor.depthStencil.stencil = 0.0;
 
@@ -79,6 +87,8 @@ void recordRenderCommandBuffers(
         vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
         vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+        vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
 
         vkCmdEndRenderPass(commandBuffers[i]);
 
