@@ -19,6 +19,10 @@ const char *APP_NAME = "Vulkan App";
 const uint32_t APP_VERSION = VK_MAKE_VERSION(1, 0, 0);
 const uint32_t VULKAN_API_VERSION = VK_API_VERSION_1_0;
 
+const int MAX_FRAMES_IN_FLIGHT = 2;
+
+const int SWAPCHAIN_IMAGE_NOT_IN_FLIGHT = -1;
+
 bool validationLayersEnabled;
 
 int main(int argc, char **argv)
@@ -98,44 +102,76 @@ int main(int argc, char **argv)
     semaphoreCreateInfo.pNext = NULL;
     semaphoreCreateInfo.flags = 0;
 
-    VkSemaphore imageAvailableSemaphore;
-    VkSemaphore renderFinishedSemaphore;
-    handleVkResult(
-        vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &imageAvailableSemaphore),
-        "creating image available semaphore");
-    handleVkResult(
-        vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &renderFinishedSemaphore),
-        "creating render finished semaphore");
+    VkFenceCreateInfo fenceCreateInfo;
+    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCreateInfo.pNext = NULL;
+    fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    VkSemaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT];
+    VkSemaphore renderFinishedSemaphores[MAX_FRAMES_IN_FLIGHT];
+    VkFence renderFinishedFences[MAX_FRAMES_IN_FLIGHT];
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        handleVkResult(
+            vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &imageAvailableSemaphores[i]),
+            "creating image available semaphore");
+        handleVkResult(
+            vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &renderFinishedSemaphores[i]),
+            "creating render finished semaphore");
+        handleVkResult(
+            vkCreateFence(device, &fenceCreateInfo, NULL, &renderFinishedFences[i]),
+            "creating render finished fence");
+    }
+
+    int *swapchainImagesInFlight = (int *)malloc(swapchain.imageCount * sizeof(int));
+    for (int i = 0; i < swapchain.imageCount; i++)
+        swapchainImagesInFlight[i] = SWAPCHAIN_IMAGE_NOT_IN_FLIGHT;
+
+    int currentFrame = 0;
 
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
+
+        vkWaitForFences(device, 1, &renderFinishedFences[currentFrame], VK_TRUE, UINT64_MAX);
+
         uint32_t imageIndex;
         handleVkResult(
-            vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex),
+            vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex),
             "acquiring next swapchain image");
+
+        if (swapchainImagesInFlight[imageIndex] != SWAPCHAIN_IMAGE_NOT_IN_FLIGHT)
+            vkWaitForFences(device, 1, &renderFinishedFences[swapchainImagesInFlight[imageIndex]], VK_TRUE, UINT32_MAX);
+
+        vkResetFences(device, 1, &renderFinishedFences[currentFrame]);
+        for (int i = 0; i < swapchain.imageCount; i++)
+            if (swapchainImagesInFlight[i] == currentFrame)
+            {
+                swapchainImagesInFlight[i] = SWAPCHAIN_IMAGE_NOT_IN_FLIGHT;
+                break;
+            }
 
         VkSubmitInfo submitInfo;
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.pNext = NULL;
         submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = &imageAvailableSemaphore;
+        submitInfo.pWaitSemaphores = &imageAvailableSemaphores[currentFrame];
         VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         submitInfo.pWaitDstStageMask = &waitStage;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
         submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
+        submitInfo.pSignalSemaphores = &renderFinishedSemaphores[currentFrame];
 
         handleVkResult(
-            vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE),
+            vkQueueSubmit(graphicsQueue, 1, &submitInfo, renderFinishedFences[currentFrame]),
             "submitting render command buffer");
 
         VkPresentInfoKHR presentInfo;
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         presentInfo.pNext = NULL;
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &renderFinishedSemaphore;
+        presentInfo.pWaitSemaphores = &renderFinishedSemaphores[currentFrame];
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &swapchain.swapchain;
         presentInfo.pImageIndices = &imageIndex;
@@ -145,13 +181,17 @@ int main(int argc, char **argv)
             vkQueuePresentKHR(presentQueue, &presentInfo),
             "submitting present call");
 
-        vkDeviceWaitIdle(device);
+        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
     vkDeviceWaitIdle(device);
 
-    vkDestroySemaphore(device, imageAvailableSemaphore, NULL);
-    vkDestroySemaphore(device, renderFinishedSemaphore, NULL);
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        vkDestroySemaphore(device, imageAvailableSemaphores[i], NULL);
+        vkDestroySemaphore(device, renderFinishedSemaphores[i], NULL);
+        vkDestroyFence(device, renderFinishedFences[i], NULL);
+    }
 
     vkDestroyCommandPool(device, graphicsCommandPool, NULL);
 
