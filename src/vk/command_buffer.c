@@ -45,7 +45,9 @@ void recordRenderCommandBuffers(
     VkPipeline graphicsPipeline,
     uint32_t count,
     VkCommandBuffer *commandBuffers,
-    VkFramebuffer *framebuffers)
+    VkFramebuffer *framebuffers,
+    uint32_t vertexCount,
+    VkBuffer vertexBuffer)
 {
     for (int i = 0; i < count; i++)
     {
@@ -88,7 +90,10 @@ void recordRenderCommandBuffers(
 
         vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-        vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+        VkDeviceSize vertexBufferOffsets[] = {0};
+        vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffer, vertexBufferOffsets);
+
+        vkCmdDraw(commandBuffers[i], vertexCount, 1, 0, 0);
 
         vkCmdEndRenderPass(commandBuffers[i]);
 

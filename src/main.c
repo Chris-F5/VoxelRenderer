@@ -11,6 +11,7 @@
 #include "vk/shader_module.h"
 #include "vk/graphics_pipeline.h"
 #include "vk/command_buffer.h"
+#include "vk/scene_data.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -91,11 +92,23 @@ int main(int argc, char **argv)
             "creating framebuffer");
     }
 
+    VkBuffer vertexBuffer;
+    VkDeviceMemory vertexBufferMemory;
+    createVertexBuffer(device, physicalDevice, &vertexBuffer, &vertexBufferMemory);
+
     VkCommandPool graphicsCommandPool = createCommandPool(device, 0, physicalDeviceProperties.graphicsFamilyIndex);
 
     VkCommandBuffer *commandBuffers = (VkCommandBuffer *)malloc(swapchain.imageCount * sizeof(VkCommandBuffer));
     allocateCommandBuffers(device, graphicsCommandPool, swapchain.imageCount, commandBuffers);
-    recordRenderCommandBuffers(pipeline.renderPass, swapchain.extent, pipeline.pipeline, swapchain.imageCount, commandBuffers, framebuffers);
+    recordRenderCommandBuffers(
+        pipeline.renderPass,
+        swapchain.extent,
+        pipeline.pipeline,
+        swapchain.imageCount,
+        commandBuffers,
+        framebuffers,
+        VERTEX_COUNT,
+        vertexBuffer);
 
     VkSemaphoreCreateInfo semaphoreCreateInfo;
     semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -201,6 +214,9 @@ int main(int argc, char **argv)
 
     cleanupGraphicsPipeline(device, pipeline);
     cleanupSwapchain(device, swapchain);
+
+    vkDestroyBuffer(device, vertexBuffer, NULL);
+    vkFreeMemory(device, vertexBufferMemory, NULL);
 
     vkDestroyDevice(device, NULL);
     vkDestroySurfaceKHR(instance, surface, NULL);

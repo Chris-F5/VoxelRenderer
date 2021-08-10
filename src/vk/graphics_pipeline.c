@@ -1,6 +1,8 @@
 #include "graphics_pipeline.h"
 
 #include "exceptions.h"
+#include "scene_data.h"
+//extern const VkVertexInputBindingDescription VERTEX_BINDING_DESCRIPTIONS[];
 
 VkPipelineShaderStageCreateInfo createShaderStage(
     VkShaderModule module,
@@ -39,10 +41,10 @@ GraphicsPipeline createGraphicsPipeline(
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputInfo.pNext = NULL;
     vertexInputInfo.flags = 0;
-    vertexInputInfo.vertexBindingDescriptionCount = 0;
-    vertexInputInfo.pVertexBindingDescriptions = NULL;
-    vertexInputInfo.vertexAttributeDescriptionCount = 0;
-    vertexInputInfo.pVertexAttributeDescriptions = NULL;
+    vertexInputInfo.vertexBindingDescriptionCount = VERTEX_BINDING_DESCRIPTION_COUNT;
+    vertexInputInfo.pVertexBindingDescriptions = VERTEX_BINDING_DESCRIPTIONS;
+    vertexInputInfo.vertexAttributeDescriptionCount = VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_COUNT;
+    vertexInputInfo.pVertexAttributeDescriptions = VERTEX_INPUT_ATTRIBUTE_DESCRIPTIONS;
 
     // INPUT ASSEMBLY
 

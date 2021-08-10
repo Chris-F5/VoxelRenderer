@@ -28,4 +28,6 @@ VkDevice createLogicalDevice(
     VkPhysicalDevice physicalDevice,
     PhysicalDeviceProperties physicalDeviceProperties);
 
+uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t memoryTypeBits, VkMemoryPropertyFlags properties);
+
 #endif

@@ -20,6 +20,8 @@ void recordRenderCommandBuffers(
     VkPipeline graphicsPipeline,
     uint32_t count,
     VkCommandBuffer *commandBuffers,
-    VkFramebuffer *framebuffers);
+    VkFramebuffer *framebuffers,
+    uint32_t vertexCount,
+    VkBuffer vertexBuffer);
 
 #endif
