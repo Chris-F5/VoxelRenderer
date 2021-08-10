@@ -163,6 +163,7 @@ int main(int argc, char **argv)
                 swapchainImagesInFlight[i] = SWAPCHAIN_IMAGE_NOT_IN_FLIGHT;
                 break;
             }
+        swapchainImagesInFlight[imageIndex] = currentFrame;
 
         VkSubmitInfo submitInfo;
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
