@@ -6,9 +6,9 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include "renderer/device.h"
-#include "renderer/swapchain.h"
-#include "renderer/graphics_pipeline.h"
+#include "device.h"
+#include "swapchain.h"
+#include "graphics_pipeline.h"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 

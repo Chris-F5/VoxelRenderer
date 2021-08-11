@@ -7,7 +7,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include "exceptions.h"
+#include "vk_utils/exceptions.h"
 
 const uint32_t QUEUE_FAMILY_DOES_NOT_EXIST = UINT32_MAX;
 
@@ -239,7 +239,7 @@ bool getPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkSurfaceKHR s
     return true;
 }
 
-void sellectPhysicalDevice(
+void selectPhysicalDevice(
     VkInstance instance,
     VkSurfaceKHR surface,
     VkPhysicalDevice *physicalDevice,
@@ -332,21 +332,4 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, PhysicalDeviceProp
         vkCreateDevice(physicalDevice, &deviceCreateInfo, NULL, &device),
         "creating logical device");
     return device;
-}
-
-uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t memoryTypeBits, VkMemoryPropertyFlags properties)
-{
-    VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-
-    for (size_t i = 0; i < memProperties.memoryTypeCount; i++)
-    {
-        if ((memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-        {
-            return i;
-        }
-    }
-
-    puts("Exiting because failed to find requested memory type");
-    exit(EXIT_FAILURE);
 }

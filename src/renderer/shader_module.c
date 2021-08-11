@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "exceptions.h"
+#include "vk_utils/exceptions.h"
 
 void readFile(char *fileName, long *fileLength, char **fileBytes)
 {

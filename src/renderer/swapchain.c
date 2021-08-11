@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-#include "exceptions.h"
+#include "vk_utils/exceptions.h"
 
 uint32_t min(uint32_t x, uint32_t y)
 {

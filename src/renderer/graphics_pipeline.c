@@ -1,8 +1,7 @@
 #include "graphics_pipeline.h"
 
-#include "exceptions.h"
+#include "vk_utils/exceptions.h"
 #include "scene_data.h"
-//extern const VkVertexInputBindingDescription VERTEX_BINDING_DESCRIPTIONS[];
 
 VkPipelineShaderStageCreateInfo createShaderStage(
     VkShaderModule module,

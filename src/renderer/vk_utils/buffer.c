@@ -1,7 +1,7 @@
 #include "buffer.h"
 
 #include "exceptions.h"
-#include "device.h"
+#include "physical_device_memory.h"
 
 void createBuffer(
     VkDevice device,

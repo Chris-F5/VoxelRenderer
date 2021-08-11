@@ -1,54 +1,22 @@
-#include "command_buffer.h"
+#include "render_command_buffer.h"
 
-#include "exceptions.h"
+#include "vk_utils/exceptions.h"
+#include "vk_utils/command_buffer.h"
 
-VkCommandPool createCommandPool(
-    VkDevice device,
-    VkCommandPoolCreateFlags flags,
-    uint32_t queueFamily)
-{
-    VkCommandPoolCreateInfo poolCreateInfo;
-    poolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolCreateInfo.pNext = NULL;
-    poolCreateInfo.flags = flags;
-    poolCreateInfo.queueFamilyIndex = queueFamily;
-
-    VkCommandPool commandPool;
-    handleVkResult(
-        vkCreateCommandPool(device, &poolCreateInfo, NULL, &commandPool),
-        "creating command pool");
-
-    return commandPool;
-}
-
-void allocateCommandBuffers(
+VkCommandBuffer *createRenderCommandBuffers(
     VkDevice device,
     VkCommandPool commandPool,
-    size_t count,
-    VkCommandBuffer *commandBuffers)
-{
-    VkCommandBufferAllocateInfo allocInfo;
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.pNext = NULL;
-    allocInfo.commandPool = commandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = count;
-
-    handleVkResult(
-        vkAllocateCommandBuffers(device, &allocInfo, commandBuffers),
-        "allocating command buffers");
-}
-
-void recordRenderCommandBuffers(
+    uint32_t count,
     VkRenderPass renderPass,
     VkExtent2D extent,
     VkPipeline graphicsPipeline,
-    uint32_t count,
-    VkCommandBuffer *commandBuffers,
-    VkFramebuffer *framebuffers,
+    const VkFramebuffer *framebuffers,
     uint32_t vertexCount,
-    VkBuffer vertexBuffer)
+    VkBuffer vertexBuffer,
+    VkCommandBuffer *commandBuffers)
 {
+    allocateCommandBuffers(device, commandPool, count, commandBuffers);
+
     for (int i = 0; i < count; i++)
     {
         VkCommandBufferBeginInfo beginInfo;
@@ -101,4 +69,6 @@ void recordRenderCommandBuffers(
             vkEndCommandBuffer(commandBuffers[i]),
             "recording render command buffer");
     }
+
+    return commandBuffers;
 }

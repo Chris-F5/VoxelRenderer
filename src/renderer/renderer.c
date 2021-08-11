@@ -3,10 +3,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "renderer/exceptions.h"
-#include "renderer/scene_data.h"
-#include "renderer/shader_module.h"
-#include "renderer/command_buffer.h"
+#include "scene_data.h"
+#include "shader_module.h"
+#include "render_command_buffer.h"
+#include "vk_utils/command_buffer.h"
+#include "vk_utils/exceptions.h"
 
 Renderer createRenderer(GLFWwindow *window)
 {
@@ -32,7 +33,7 @@ Renderer createRenderer(GLFWwindow *window)
         glfwCreateWindowSurface(r.instance, window, NULL, &r.surface),
         "creating surface");
 
-    sellectPhysicalDevice(r.instance, r.surface, &r.physicalDevice, &r.physicalDeviceProperties);
+    selectPhysicalDevice(r.instance, r.surface, &r.physicalDevice, &r.physicalDeviceProperties);
 
     r.device = createLogicalDevice(
         r.physicalDevice,
@@ -83,16 +84,17 @@ Renderer createRenderer(GLFWwindow *window)
     r.graphicsCommandPool = createCommandPool(r.device, 0, r.physicalDeviceProperties.graphicsFamilyIndex);
 
     r.commandBuffers = (VkCommandBuffer *)malloc(r.swapchain.imageCount * sizeof(VkCommandBuffer));
-    allocateCommandBuffers(r.device, r.graphicsCommandPool, r.swapchain.imageCount, r.commandBuffers);
-    recordRenderCommandBuffers(
+    createRenderCommandBuffers(
+        r.device,
+        r.graphicsCommandPool,
+        r.swapchain.imageCount,
         r.graphicsPipeline.renderPass,
         r.swapchain.extent,
         r.graphicsPipeline.pipeline,
-        r.swapchain.imageCount,
-        r.commandBuffers,
         r.framebuffers,
         VERTEX_COUNT,
-        r.vertexBuffer);
+        r.vertexBuffer,
+        r.commandBuffers);
 
     VkSemaphoreCreateInfo semaphoreCreateInfo;
     semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -183,6 +185,9 @@ void drawFrame(Renderer *r)
 void cleanupRenderer(Renderer r)
 {
     vkDeviceWaitIdle(r.device);
+
+    free(r.commandBuffers);
+    free(r.swapchainImagesInFlight);
 
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {

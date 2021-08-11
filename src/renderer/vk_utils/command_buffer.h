@@ -14,14 +14,4 @@ void allocateCommandBuffers(
     size_t count,
     VkCommandBuffer *commandBuffers);
 
-void recordRenderCommandBuffers(
-    VkRenderPass renderPass,
-    VkExtent2D extent,
-    VkPipeline graphicsPipeline,
-    uint32_t count,
-    VkCommandBuffer *commandBuffers,
-    VkFramebuffer *framebuffers,
-    uint32_t vertexCount,
-    VkBuffer vertexBuffer);
-
 #endif
