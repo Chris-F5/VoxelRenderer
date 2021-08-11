@@ -11,11 +11,6 @@
 
 const uint32_t QUEUE_FAMILY_DOES_NOT_EXIST = UINT32_MAX;
 
-extern char *APP_NAME;
-extern uint32_t APP_VERSION;
-extern uint32_t VULKAN_API_VERSION;
-extern bool validationLayersEnabled;
-
 const char *VALIDATION_LAYERS[] = {
     "VK_LAYER_KHRONOS_validation"};
 
@@ -55,16 +50,16 @@ bool checkValidationLayerSupport(void)
     return true;
 }
 
-VkInstance createInstance(void)
+VkInstance createInstance(char *appName, uint32_t appVersion, uint32_t vulkanApiVersion, bool validationLayersEnabled)
 {
     VkApplicationInfo appInfo;
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pNext = NULL;
-    appInfo.pApplicationName = APP_NAME;
-    appInfo.applicationVersion = APP_VERSION;
+    appInfo.pApplicationName = appName;
+    appInfo.applicationVersion = appVersion;
     appInfo.pEngineName = "No Engine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VULKAN_API_VERSION;
+    appInfo.apiVersion = vulkanApiVersion;
 
     uint32_t glfwExtensionCount;
     const char **glfwExtensions;
@@ -279,7 +274,7 @@ void sellectPhysicalDevice(
     exit(EXIT_FAILURE);
 }
 
-VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, PhysicalDeviceProperties physicalDeviceProperties)
+VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, PhysicalDeviceProperties physicalDeviceProperties, bool validationLayersEnabled)
 {
     uint32_t queueFamilyCount;
     uint32_t queueFamilyIndices[2];

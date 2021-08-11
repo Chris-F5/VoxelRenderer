@@ -1,7 +1,7 @@
 #ifndef COMMAND_BUFFER
 #define COMMAND_BUFFER
 
-#include "vulkan/vulkan.h"
+#include <vulkan/vulkan.h>
 
 VkCommandPool createCommandPool(
     VkDevice device,
