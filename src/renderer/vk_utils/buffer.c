@@ -1,5 +1,7 @@
 #include "buffer.h"
 
+#include <string.h>
+
 #include "exceptions.h"
 #include "physical_device_memory.h"
 
@@ -10,8 +12,8 @@ void createBuffer(
     VkBufferCreateFlags flags,
     VkBufferUsageFlags usageFlags,
     VkMemoryPropertyFlags memoryPropertyFlags,
-    VkBuffer *buffer,
-    VkDeviceMemory *bufferMemory)
+    VkBuffer* buffer,
+    VkDeviceMemory* bufferMemory)
 {
     VkBufferCreateInfo createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -41,4 +43,17 @@ void createBuffer(
         "allocating buffer");
 
     vkBindBufferMemory(device, *buffer, *bufferMemory, 0);
+}
+
+void copyDataToBuffer(
+    VkDevice device,
+    const void* data,
+    VkDeviceMemory bufferMemory,
+    size_t offset,
+    size_t size)
+{
+    void* dst;
+    vkMapMemory(device, bufferMemory, offset, size, 0, &dst);
+    memcpy(dst, data, size);
+    vkUnmapMemory(device, bufferMemory);
 }

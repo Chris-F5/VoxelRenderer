@@ -1,24 +1,25 @@
 #include "render_command_buffer.h"
 
-#include "vk_utils/exceptions.h"
 #include "vk_utils/command_buffer.h"
+#include "vk_utils/exceptions.h"
 
-VkCommandBuffer *createRenderCommandBuffers(
+VkCommandBuffer* createRenderCommandBuffers(
     VkDevice device,
     VkCommandPool commandPool,
     uint32_t count,
     VkRenderPass renderPass,
     VkExtent2D extent,
     VkPipeline graphicsPipeline,
-    const VkFramebuffer *framebuffers,
+    VkPipelineLayout graphicsPipelineLayout,
+    const VkFramebuffer* framebuffers,
+    const VkDescriptorSet* descriptorSets,
     uint32_t vertexCount,
     VkBuffer vertexBuffer,
-    VkCommandBuffer *commandBuffers)
+    VkCommandBuffer* commandBuffers)
 {
     allocateCommandBuffers(device, commandPool, count, commandBuffers);
 
-    for (int i = 0; i < count; i++)
-    {
+    for (int i = 0; i < count; i++) {
         VkCommandBufferBeginInfo beginInfo;
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.pNext = NULL;
@@ -49,7 +50,7 @@ VkCommandBuffer *createRenderCommandBuffers(
         renderPassInfo.pNext = NULL;
         renderPassInfo.renderPass = renderPass;
         renderPassInfo.framebuffer = framebuffers[i];
-        renderPassInfo.renderArea.offset = (VkOffset2D){0, 0};
+        renderPassInfo.renderArea.offset = (VkOffset2D) { 0, 0 };
         renderPassInfo.renderArea.extent = extent;
         renderPassInfo.clearValueCount = 1;
         renderPassInfo.pClearValues = &clearColor;
@@ -58,8 +59,18 @@ VkCommandBuffer *createRenderCommandBuffers(
 
         vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-        VkDeviceSize vertexBufferOffsets[] = {0};
+        VkDeviceSize vertexBufferOffsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffer, vertexBufferOffsets);
+
+        vkCmdBindDescriptorSets(
+            commandBuffers[i],
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            graphicsPipelineLayout,
+            0,
+            1,
+            &descriptorSets[i],
+            0,
+            NULL);
 
         vkCmdDraw(commandBuffers[i], vertexCount, 1, 0, 0);
 

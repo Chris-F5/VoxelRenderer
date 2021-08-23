@@ -3,16 +3,18 @@
 
 #include <vulkan/vulkan.h>
 
-VkCommandBuffer *createRenderCommandBuffers(
+VkCommandBuffer* createRenderCommandBuffers(
     VkDevice device,
     VkCommandPool commandPool,
     uint32_t count,
     VkRenderPass renderPass,
     VkExtent2D extent,
     VkPipeline graphicsPipeline,
-    const VkFramebuffer *framebuffers,
+    VkPipelineLayout graphicsPipelineLayout,
+    const VkFramebuffer* framebuffers,
+    const VkDescriptorSet* descriptorSets,
     uint32_t vertexCount,
     VkBuffer vertexBuffer,
-    VkCommandBuffer *commandBuffers);
+    VkCommandBuffer* commandBuffers);
 
 #endif

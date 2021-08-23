@@ -5,7 +5,7 @@
 
 #include "vk_utils/exceptions.h"
 
-void readFile(char *fileName, long *fileLength, char **fileBytes)
+void readFile(const char *fileName, long *fileLength, char **fileBytes)
 {
     FILE *file = fopen(fileName, "rb");
     if (file)
@@ -26,7 +26,7 @@ void readFile(char *fileName, long *fileLength, char **fileBytes)
     }
 }
 
-VkShaderModule createShaderModule(VkDevice device, char *srcFileName)
+VkShaderModule createShaderModule(VkDevice device, const char *srcFileName)
 {
     long spvLength;
     char *spv;

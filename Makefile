@@ -1,7 +1,7 @@
 OUTPUTNAME = VoxelRenderer
 CC = gcc
 CFLAGS = -g -D DEBUG
-LDFLAGS = -l glfw -l vulkan -l cglm
+LDFLAGS = -l glfw -l vulkan -l cglm -l m
 SRCS = $(shell find ./src -type f -name "*.c")
 HEADERS = $(shell find ./src -type f -name "*.h")
 OBJS = $(patsubst ./src/%.c, obj/%.o, $(SRCS))

@@ -1,7 +1,7 @@
 #include "graphics_pipeline.h"
 
-#include "vk_utils/exceptions.h"
 #include "scene_data.h"
+#include "vk_utils/exceptions.h"
 
 VkPipelineShaderStageCreateInfo createShaderStage(
     VkShaderModule module,
@@ -23,16 +23,15 @@ GraphicsPipeline createGraphicsPipeline(
     VkDevice device,
     Swapchain swapchain,
     VkShaderModule vertShader,
-    VkShaderModule fragShader)
+    VkShaderModule fragShader,
+    VkDescriptorSetLayout descriptorSetLayout)
 {
     GraphicsPipeline pipeline;
 
     // SHADER STAGES
 
-    VkPipelineShaderStageCreateInfo vertShaderStage =
-        createShaderStage(vertShader, VK_SHADER_STAGE_VERTEX_BIT);
-    VkPipelineShaderStageCreateInfo fragShaderStage =
-        createShaderStage(fragShader, VK_SHADER_STAGE_FRAGMENT_BIT);
+    VkPipelineShaderStageCreateInfo vertShaderStage = createShaderStage(vertShader, VK_SHADER_STAGE_VERTEX_BIT);
+    VkPipelineShaderStageCreateInfo fragShaderStage = createShaderStage(fragShader, VK_SHADER_STAGE_FRAGMENT_BIT);
 
     // VERTEX INPUT
 
@@ -88,7 +87,7 @@ GraphicsPipeline createGraphicsPipeline(
     rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
     rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizationInfo.depthBiasEnable = VK_FALSE;
     rasterizationInfo.depthBiasConstantFactor = 0.0f;
     rasterizationInfo.depthBiasClamp = 0.0f;
@@ -139,8 +138,8 @@ GraphicsPipeline createGraphicsPipeline(
     pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutCreateInfo.pNext = NULL;
     pipelineLayoutCreateInfo.flags = 0;
-    pipelineLayoutCreateInfo.setLayoutCount = 0;
-    pipelineLayoutCreateInfo.pSetLayouts = NULL;
+    pipelineLayoutCreateInfo.setLayoutCount = 1;
+    pipelineLayoutCreateInfo.pSetLayouts = &descriptorSetLayout;
     pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pipelineLayoutCreateInfo.pPushConstantRanges = NULL;
 
@@ -207,7 +206,7 @@ GraphicsPipeline createGraphicsPipeline(
     pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineCreateInfo.pNext = NULL;
     pipelineCreateInfo.flags = 0;
-    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStage, fragShaderStage};
+    VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStage, fragShaderStage };
     pipelineCreateInfo.stageCount = sizeof(shaderStages) / sizeof(shaderStages[0]);
     pipelineCreateInfo.pStages = shaderStages;
     pipelineCreateInfo.pVertexInputState = &vertexInputInfo;

@@ -6,9 +6,10 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include "descriptor_set.h"
 #include "device.h"
-#include "swapchain.h"
 #include "graphics_pipeline.h"
+#include "swapchain.h"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
@@ -26,20 +27,25 @@ typedef struct
     VkQueue presentQueue;
     Swapchain swapchain;
     GraphicsPipeline graphicsPipeline;
-    VkFramebuffer *framebuffers;
+    VkFramebuffer* framebuffers;
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
+    VkDescriptorPool descriptorPool;
+    VkDescriptorSetLayout descriptorSetLayout;
+    VkDescriptorSet* descriptorSets;
+    VkBuffer* uniformBuffers;
+    VkDeviceMemory* uniformBuffersMemory;
     VkCommandPool graphicsCommandPool;
-    VkCommandBuffer *commandBuffers;
+    VkCommandBuffer* commandBuffers;
     VkSemaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT];
     VkSemaphore renderFinishedSemaphores[MAX_FRAMES_IN_FLIGHT];
     VkFence renderFinishedFences[MAX_FRAMES_IN_FLIGHT];
-    int *swapchainImagesInFlight;
+    int* swapchainImagesInFlight;
     int currentFrame;
 } Renderer;
 
-Renderer createRenderer(GLFWwindow *window);
-void drawFrame(Renderer *r);
+Renderer createRenderer(GLFWwindow* window);
+void drawFrame(Renderer* r);
 void cleanupRenderer(Renderer r);
 
 #endif

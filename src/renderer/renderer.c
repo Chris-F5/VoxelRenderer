@@ -1,15 +1,20 @@
 #include "renderer.h"
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
+#include <cglm/cglm.h>
+
+#include "descriptor_set.h"
+#include "render_command_buffer.h"
 #include "scene_data.h"
 #include "shader_module.h"
-#include "render_command_buffer.h"
+
+#include "vk_utils/buffer.h"
 #include "vk_utils/command_buffer.h"
 #include "vk_utils/exceptions.h"
 
-Renderer createRenderer(GLFWwindow *window)
+Renderer createRenderer(GLFWwindow* window)
 {
     Renderer r;
 
@@ -46,21 +51,42 @@ Renderer createRenderer(GLFWwindow *window)
 
     r.swapchain = createSwapchain(r.device, r.physicalDevice, r.physicalDeviceProperties, window, r.surface);
 
+    // GPU MEMORY AND DESCRIPTOR SETS
+
+    createVertexBuffer(r.device, r.physicalDevice, &r.vertexBuffer, &r.vertexBufferMemory);
+
+    r.descriptorSets = malloc(r.swapchain.imageCount * sizeof(VkDescriptorSet));
+    r.uniformBuffers = malloc(r.swapchain.imageCount * sizeof(VkBuffer));
+    r.uniformBuffersMemory = malloc(r.swapchain.imageCount * sizeof(VkDeviceMemory));
+    createDescriptorSets(
+        r.device,
+        r.physicalDevice,
+        r.swapchain.imageCount,
+        &r.descriptorPool,
+        &r.descriptorSetLayout,
+        r.descriptorSets,
+        r.uniformBuffers,
+        r.uniformBuffersMemory);
+
     // GRAPHICS PIPELINE
 
     VkShaderModule vertShader = createShaderModule(r.device, "shader.vert.spv");
     VkShaderModule fragShader = createShaderModule(r.device, "shader.frag.spv");
 
-    r.graphicsPipeline = createGraphicsPipeline(r.device, r.swapchain, vertShader, fragShader);
+    r.graphicsPipeline = createGraphicsPipeline(
+        r.device,
+        r.swapchain,
+        vertShader,
+        fragShader,
+        r.descriptorSetLayout);
 
     vkDestroyShaderModule(r.device, vertShader, NULL);
     vkDestroyShaderModule(r.device, fragShader, NULL);
 
     // FRAMEBUFFERS
 
-    r.framebuffers = (VkFramebuffer *)malloc(r.swapchain.imageCount * sizeof(VkFramebuffer));
-    for (int i = 0; i < r.swapchain.imageCount; i++)
-    {
+    r.framebuffers = (VkFramebuffer*)malloc(r.swapchain.imageCount * sizeof(VkFramebuffer));
+    for (int i = 0; i < r.swapchain.imageCount; i++) {
         VkFramebufferCreateInfo framebufferCreateInfo;
         framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferCreateInfo.pNext = NULL;
@@ -77,13 +103,11 @@ Renderer createRenderer(GLFWwindow *window)
             "creating framebuffer");
     }
 
-    // GPU MEMORY
-
-    createVertexBuffer(r.device, r.physicalDevice, &r.vertexBuffer, &r.vertexBufferMemory);
+    // COMMAND BUFFERS
 
     r.graphicsCommandPool = createCommandPool(r.device, 0, r.physicalDeviceProperties.graphicsFamilyIndex);
 
-    r.commandBuffers = (VkCommandBuffer *)malloc(r.swapchain.imageCount * sizeof(VkCommandBuffer));
+    r.commandBuffers = (VkCommandBuffer*)malloc(r.swapchain.imageCount * sizeof(VkCommandBuffer));
     createRenderCommandBuffers(
         r.device,
         r.graphicsCommandPool,
@@ -91,10 +115,14 @@ Renderer createRenderer(GLFWwindow *window)
         r.graphicsPipeline.renderPass,
         r.swapchain.extent,
         r.graphicsPipeline.pipeline,
+        r.graphicsPipeline.pipelineLayout,
         r.framebuffers,
+        r.descriptorSets,
         VERTEX_COUNT,
         r.vertexBuffer,
         r.commandBuffers);
+
+    // SYNCHRONIZATION OBJECTS
 
     VkSemaphoreCreateInfo semaphoreCreateInfo;
     semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -106,8 +134,7 @@ Renderer createRenderer(GLFWwindow *window)
     fenceCreateInfo.pNext = NULL;
     fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-    {
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         handleVkResult(
             vkCreateSemaphore(r.device, &semaphoreCreateInfo, NULL, &r.imageAvailableSemaphores[i]),
             "creating image available semaphore");
@@ -119,7 +146,7 @@ Renderer createRenderer(GLFWwindow *window)
             "creating render finished fence");
     }
 
-    r.swapchainImagesInFlight = (int *)malloc(r.swapchain.imageCount * sizeof(int));
+    r.swapchainImagesInFlight = (int*)malloc(r.swapchain.imageCount * sizeof(int));
     for (int i = 0; i < r.swapchain.imageCount; i++)
         r.swapchainImagesInFlight[i] = SWAPCHAIN_IMAGE_NOT_IN_FLIGHT;
 
@@ -128,7 +155,7 @@ Renderer createRenderer(GLFWwindow *window)
     return r;
 }
 
-void drawFrame(Renderer *r)
+void drawFrame(Renderer* r)
 {
     vkWaitForFences(r->device, 1, &r->renderFinishedFences[r->currentFrame], VK_TRUE, UINT64_MAX);
 
@@ -142,12 +169,21 @@ void drawFrame(Renderer *r)
 
     vkResetFences(r->device, 1, &r->renderFinishedFences[r->currentFrame]);
     for (int i = 0; i < r->swapchain.imageCount; i++)
-        if (r->swapchainImagesInFlight[i] == r->currentFrame)
-        {
+        if (r->swapchainImagesInFlight[i] == r->currentFrame) {
             r->swapchainImagesInFlight[i] = SWAPCHAIN_IMAGE_NOT_IN_FLIGHT;
             break;
         }
     r->swapchainImagesInFlight[imageIndex] = r->currentFrame;
+
+    // TODO: rotate r->uniformData
+
+    UniformBuffer uniformData;
+    glm_mat4_identity(uniformData.model);
+    glm_rotate(uniformData.model, (float)glfwGetTime() * 2.0f, (vec3) { 0.0f, 0.0f, 1.0f });
+    glm_lookat((vec3) { 2.0f, 2.0f, 2.0f }, (vec3) { 0.0f, 0.0f, 0.0f }, (vec3) { 0.0f, 0.0f, 1.0f }, uniformData.view);
+    glm_perspective(glm_rad(45.0f), (float)r->swapchain.extent.width / (float)r->swapchain.extent.height, 0.1f, 10.0f, uniformData.proj);
+    uniformData.proj[1][1] *= -1;
+    copyDataToBuffer(r->device, &uniformData, r->uniformBuffersMemory[imageIndex], 0, sizeof(UniformBuffer));
 
     VkSubmitInfo submitInfo;
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -180,6 +216,7 @@ void drawFrame(Renderer *r)
         "submitting present call");
 
     r->currentFrame = (r->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    r->tick++;
 }
 
 void cleanupRenderer(Renderer r)
@@ -189,12 +226,21 @@ void cleanupRenderer(Renderer r)
     free(r.commandBuffers);
     free(r.swapchainImagesInFlight);
 
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-    {
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(r.device, r.imageAvailableSemaphores[i], NULL);
         vkDestroySemaphore(r.device, r.renderFinishedSemaphores[i], NULL);
         vkDestroyFence(r.device, r.renderFinishedFences[i], NULL);
     }
+
+    vkDestroyDescriptorPool(r.device, r.descriptorPool, NULL);
+    free(r.descriptorSets);
+    vkDestroyDescriptorSetLayout(r.device, r.descriptorSetLayout, NULL);
+    for (int i = 0; i < r.swapchain.imageCount; i++) {
+        vkDestroyBuffer(r.device, r.uniformBuffers[i], NULL);
+        vkFreeMemory(r.device, r.uniformBuffersMemory[i], NULL);
+    }
+    free(r.uniformBuffers);
+    free(r.uniformBuffersMemory);
 
     vkDestroyCommandPool(r.device, r.graphicsCommandPool, NULL);
 

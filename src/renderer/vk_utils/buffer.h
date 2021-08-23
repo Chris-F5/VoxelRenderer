@@ -10,7 +10,14 @@ void createBuffer(
     VkBufferCreateFlags flags,
     VkBufferUsageFlags usageFlags,
     VkMemoryPropertyFlags memoryPropertyFlags,
-    VkBuffer *buffer,
-    VkDeviceMemory *bufferMemory);
+    VkBuffer* buffer,
+    VkDeviceMemory* bufferMemory);
+
+void copyDataToBuffer(
+    VkDevice device,
+    const void* data,
+    VkDeviceMemory bufferMemory,
+    size_t offset,
+    size_t size);
 
 #endif
