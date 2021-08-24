@@ -4,11 +4,15 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <cglm/cglm.h>
 
 #include "renderer/renderer.h"
 
 const uint32_t WIDTH = 800;
-uint32_t HEIGHT = 600;
+const uint32_t HEIGHT = 600;
+
+const float moveSpeed = 0.0005f;
+const float rotSpeed = 0.01f;
 
 void glfwErrorCallback(int _, const char* errorString)
 {
@@ -26,9 +30,60 @@ int main(int argc, char** argv)
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan App", NULL, NULL);
 
     Renderer renderer = createRenderer(window);
+    glm_vec3_copy((vec3){0.0f, 0.0f, 2.0f}, renderer.camera.pos);
+    renderer.camera.yaw = 180;
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+
+        if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+            renderer.camera.yaw -= rotSpeed;
+        if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+            renderer.camera.yaw += rotSpeed;
+        if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+            renderer.camera.pitch += rotSpeed;
+        if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+            renderer.camera.pitch -= rotSpeed;
+        if(renderer.camera.pitch > 89.9f)
+            renderer.camera.pitch = 89.9f;
+        if(renderer.camera.pitch < -89.9f)
+            renderer.camera.pitch = -89.9f;
+        if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        {
+            vec3 forward;
+            getCameraForward(renderer.camera, forward);
+            forward[1] = 0;
+            glm_normalize(forward);
+            glm_vec3_scale(forward, moveSpeed, forward);
+            glm_vec3_add(renderer.camera.pos, forward, renderer.camera.pos);
+        }
+        if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        {
+            vec3 forward;
+            getCameraForward(renderer.camera, forward);
+            forward[1] = 0;
+            glm_normalize(forward);
+            glm_vec3_scale(forward, -moveSpeed, forward);
+            glm_vec3_add(renderer.camera.pos, forward, renderer.camera.pos);
+        }
+        if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        {
+            vec3 right;
+            getCameraRight(renderer.camera, right);
+            glm_vec3_scale(right, moveSpeed, right);
+            glm_vec3_add(renderer.camera.pos, right, renderer.camera.pos);
+        }
+        if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        {
+            vec3 right;
+            getCameraRight(renderer.camera, right);
+            glm_vec3_scale(right, -moveSpeed, right);
+            glm_vec3_add(renderer.camera.pos, right, renderer.camera.pos);
+        }
+        if(glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+            renderer.camera.pos[1] += moveSpeed;
+        if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+            renderer.camera.pos[1] -= moveSpeed;
 
         drawFrame(&renderer);
     }

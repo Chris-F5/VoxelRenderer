@@ -152,6 +152,14 @@ Renderer createRenderer(GLFWwindow* window)
 
     r.currentFrame = 0;
 
+    glm_vec3_zero(r.camera.pos);
+    r.camera.yaw = 0.0f;
+    r.camera.pitch = 0.0f;
+    r.camera.aspectRatio = (float)r.swapchain.extent.width / (float)r.swapchain.extent.height;
+    r.camera.fov = 90.0f;
+    r.camera.nearClip = 0.1f;
+    r.camera.farClip = 100.0f;
+
     return r;
 }
 
@@ -179,10 +187,9 @@ void drawFrame(Renderer* r)
 
     UniformBuffer uniformData;
     glm_mat4_identity(uniformData.model);
-    glm_rotate(uniformData.model, (float)glfwGetTime() * 2.0f, (vec3) { 0.0f, 0.0f, 1.0f });
-    glm_lookat((vec3) { 2.0f, 2.0f, 2.0f }, (vec3) { 0.0f, 0.0f, 0.0f }, (vec3) { 0.0f, 0.0f, 1.0f }, uniformData.view);
-    glm_perspective(glm_rad(45.0f), (float)r->swapchain.extent.width / (float)r->swapchain.extent.height, 0.1f, 10.0f, uniformData.proj);
-    uniformData.proj[1][1] *= -1;
+    glm_rotate(uniformData.model, (float)glfwGetTime() * 0.4f, (vec3) { 0.0f, 0.0f, 1.0f });
+    createViewMat(r->camera, uniformData.view);
+    createProjMat(r->camera, uniformData.proj);
     copyDataToBuffer(r->device, &uniformData, r->uniformBuffersMemory[imageIndex], 0, sizeof(UniformBuffer));
 
     VkSubmitInfo submitInfo;
@@ -216,7 +223,6 @@ void drawFrame(Renderer* r)
         "submitting present call");
 
     r->currentFrame = (r->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-    r->tick++;
 }
 
 void cleanupRenderer(Renderer r)

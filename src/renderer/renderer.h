@@ -6,10 +6,13 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <cglm/types.h>
+
 #include "descriptor_set.h"
 #include "device.h"
 #include "graphics_pipeline.h"
 #include "swapchain.h"
+#include "camera.h"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
@@ -42,6 +45,7 @@ typedef struct
     VkFence renderFinishedFences[MAX_FRAMES_IN_FLIGHT];
     int* swapchainImagesInFlight;
     int currentFrame;
+    Camera camera;
 } Renderer;
 
 Renderer createRenderer(GLFWwindow* window);
