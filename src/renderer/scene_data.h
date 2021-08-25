@@ -14,6 +14,9 @@ typedef struct
 extern const Vertex VERTICES[];
 extern const size_t VERTEX_COUNT;
 
+extern const uint32_t VERTEX_INDICES[];
+extern const size_t VERTEX_INDEX_COUNT;
+
 extern const VkVertexInputBindingDescription VERTEX_BINDING_DESCRIPTIONS[];
 extern const size_t VERTEX_BINDING_DESCRIPTION_COUNT;
 
@@ -29,5 +32,15 @@ void createVertexBuffer(
     VkDeviceMemory* stagingBufferMemory,
     VkBuffer* vertexBuffer,
     VkDeviceMemory* vertexBufferMemory);
+
+void createIndexBuffer(
+    VkDevice device,
+    VkPhysicalDevice physicalDevice,
+    VkQueue queue,
+    VkCommandPool commandPool,
+    VkBuffer* stagingBuffer,
+    VkDeviceMemory* stagingBufferMemory,
+    VkBuffer* indexBuffer,
+    VkDeviceMemory* indexBufferMemory);
 
 #endif

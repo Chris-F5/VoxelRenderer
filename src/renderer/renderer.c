@@ -71,6 +71,16 @@ Renderer createRenderer(GLFWwindow* window)
         &r.vertexBuffer,
         &r.vertexBufferMemory);
 
+    createIndexBuffer(
+        r.device,
+        r.physicalDevice,
+        r.graphicsQueue,
+        r.transientGraphicsCommandPool,
+        &r.indexStagingBuffer,
+        &r.indexStagingBufferMemory,
+        &r.indexBuffer,
+        &r.indexBufferMemory);
+
     r.descriptorSets = malloc(r.swapchain.imageCount * sizeof(VkDescriptorSet));
     r.uniformBuffers = malloc(r.swapchain.imageCount * sizeof(VkBuffer));
     r.uniformBuffersMemory = malloc(r.swapchain.imageCount * sizeof(VkDeviceMemory));
@@ -132,8 +142,9 @@ Renderer createRenderer(GLFWwindow* window)
         r.graphicsPipeline.pipelineLayout,
         r.framebuffers,
         r.descriptorSets,
-        VERTEX_COUNT,
+        VERTEX_INDEX_COUNT,
         r.vertexBuffer,
+        r.indexBuffer,
         r.commandBuffers);
 
     // SYNCHRONIZATION OBJECTS
@@ -271,6 +282,11 @@ void cleanupRenderer(Renderer r)
 
     cleanupGraphicsPipeline(r.device, r.graphicsPipeline);
     cleanupSwapchain(r.device, r.swapchain);
+
+    vkDestroyBuffer(r.device, r.indexStagingBuffer, NULL);
+    vkFreeMemory(r.device, r.indexStagingBufferMemory, NULL);
+    vkDestroyBuffer(r.device, r.indexBuffer, NULL);
+    vkFreeMemory(r.device, r.indexBufferMemory, NULL);
 
     vkDestroyBuffer(r.device, r.vertexStagingBuffer, NULL);
     vkFreeMemory(r.device, r.vertexStagingMemory, NULL);
