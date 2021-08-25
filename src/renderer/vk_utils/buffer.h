@@ -20,4 +20,13 @@ void copyDataToBuffer(
     size_t offset,
     size_t size);
 
+void bufferTransfer(
+    VkDevice device,
+    VkQueue queue,
+    VkCommandPool commandPool,
+    uint32_t copyRegionCount,
+    VkBufferCopy *copyRegions,
+    VkBuffer srcBuffer,
+    VkBuffer dstBuffer);
+
 #endif

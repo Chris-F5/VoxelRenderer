@@ -51,9 +51,25 @@ Renderer createRenderer(GLFWwindow* window)
 
     r.swapchain = createSwapchain(r.device, r.physicalDevice, r.physicalDeviceProperties, window, r.surface);
 
+    // COMMAND POOLS
+
+    r.graphicsCommandPool = createCommandPool(r.device, 0, r.physicalDeviceProperties.graphicsFamilyIndex);
+    r.transientGraphicsCommandPool = createCommandPool(
+        r.device,
+        VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+        r.physicalDeviceProperties.graphicsFamilyIndex);
+
     // GPU MEMORY AND DESCRIPTOR SETS
 
-    createVertexBuffer(r.device, r.physicalDevice, &r.vertexBuffer, &r.vertexBufferMemory);
+    createVertexBuffer(
+        r.device,
+        r.physicalDevice,
+        r.graphicsQueue,
+        r.transientGraphicsCommandPool,
+        &r.vertexStagingBuffer,
+        &r.vertexStagingMemory,
+        &r.vertexBuffer,
+        &r.vertexBufferMemory);
 
     r.descriptorSets = malloc(r.swapchain.imageCount * sizeof(VkDescriptorSet));
     r.uniformBuffers = malloc(r.swapchain.imageCount * sizeof(VkBuffer));
@@ -104,8 +120,6 @@ Renderer createRenderer(GLFWwindow* window)
     }
 
     // COMMAND BUFFERS
-
-    r.graphicsCommandPool = createCommandPool(r.device, 0, r.physicalDeviceProperties.graphicsFamilyIndex);
 
     r.commandBuffers = (VkCommandBuffer*)malloc(r.swapchain.imageCount * sizeof(VkCommandBuffer));
     createRenderCommandBuffers(
@@ -249,6 +263,7 @@ void cleanupRenderer(Renderer r)
     free(r.uniformBuffersMemory);
 
     vkDestroyCommandPool(r.device, r.graphicsCommandPool, NULL);
+    vkDestroyCommandPool(r.device, r.transientGraphicsCommandPool, NULL);
 
     for (int i = 0; i < r.swapchain.imageCount; i++)
         vkDestroyFramebuffer(r.device, r.framebuffers[i], NULL);
@@ -257,6 +272,8 @@ void cleanupRenderer(Renderer r)
     cleanupGraphicsPipeline(r.device, r.graphicsPipeline);
     cleanupSwapchain(r.device, r.swapchain);
 
+    vkDestroyBuffer(r.device, r.vertexStagingBuffer, NULL);
+    vkFreeMemory(r.device, r.vertexStagingMemory, NULL);
     vkDestroyBuffer(r.device, r.vertexBuffer, NULL);
     vkFreeMemory(r.device, r.vertexBufferMemory, NULL);
 

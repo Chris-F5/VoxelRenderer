@@ -8,11 +8,11 @@
 
 #include <cglm/types.h>
 
+#include "camera.h"
 #include "descriptor_set.h"
 #include "device.h"
 #include "graphics_pipeline.h"
 #include "swapchain.h"
-#include "camera.h"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
@@ -33,12 +33,15 @@ typedef struct
     VkFramebuffer* framebuffers;
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
+    VkBuffer vertexStagingBuffer;
+    VkDeviceMemory vertexStagingMemory;
     VkDescriptorPool descriptorPool;
     VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorSet* descriptorSets;
     VkBuffer* uniformBuffers;
     VkDeviceMemory* uniformBuffersMemory;
     VkCommandPool graphicsCommandPool;
+    VkCommandPool transientGraphicsCommandPool;
     VkCommandBuffer* commandBuffers;
     VkSemaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT];
     VkSemaphore renderFinishedSemaphores[MAX_FRAMES_IN_FLIGHT];

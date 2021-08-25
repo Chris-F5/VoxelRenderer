@@ -20,10 +20,14 @@ extern const size_t VERTEX_BINDING_DESCRIPTION_COUNT;
 extern const VkVertexInputAttributeDescription VERTEX_INPUT_ATTRIBUTE_DESCRIPTIONS[];
 extern const size_t VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_COUNT;
 
-VkBuffer createVertexBuffer(
+void createVertexBuffer(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
-    VkBuffer *buffer,
-    VkDeviceMemory *bufferMemory);
+    VkQueue queue,
+    VkCommandPool commandPool,
+    VkBuffer* stagingBuffer,
+    VkDeviceMemory* stagingBufferMemory,
+    VkBuffer* vertexBuffer,
+    VkDeviceMemory* vertexBufferMemory);
 
 #endif
