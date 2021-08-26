@@ -7,7 +7,8 @@
 
 #include "descriptor_set.h"
 #include "render_command_buffer.h"
-#include "scene_data.h"
+#include "scene_data/block.h"
+#include "scene_data/vertex_buffer.h"
 #include "shader_module.h"
 
 #include "vk_utils/buffer.h"
@@ -61,23 +62,22 @@ Renderer createRenderer(GLFWwindow* window)
 
     // GPU MEMORY AND DESCRIPTOR SETS
 
-    createVertexBuffer(
+    uint32_t vertexCount;
+    createVertexGrid(
         r.device,
         r.physicalDevice,
         r.graphicsQueue,
         r.transientGraphicsCommandPool,
-        &r.vertexStagingBuffer,
-        &r.vertexStagingMemory,
+        2,
+        &vertexCount,
         &r.vertexBuffer,
         &r.vertexBufferMemory);
 
+    uint32_t indexCount;
     createIndexBuffer(
         r.device,
         r.physicalDevice,
-        r.graphicsQueue,
-        r.transientGraphicsCommandPool,
-        &r.indexStagingBuffer,
-        &r.indexStagingBufferMemory,
+        &indexCount,
         &r.indexBuffer,
         &r.indexBufferMemory);
 
@@ -142,7 +142,7 @@ Renderer createRenderer(GLFWwindow* window)
         r.graphicsPipeline.pipelineLayout,
         r.framebuffers,
         r.descriptorSets,
-        VERTEX_INDEX_COUNT,
+        indexCount,
         r.vertexBuffer,
         r.indexBuffer,
         r.commandBuffers);
