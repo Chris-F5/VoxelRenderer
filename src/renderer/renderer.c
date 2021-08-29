@@ -8,7 +8,6 @@
 #include "descriptor_set.h"
 #include "render_command_buffer.h"
 #include "scene_data/block.h"
-#include "scene_data/vertex_buffer.h"
 #include "shader_module.h"
 
 #include "vk_utils/buffer.h"
@@ -62,21 +61,25 @@ Renderer createRenderer(GLFWwindow* window)
 
     // GPU MEMORY AND DESCRIPTOR SETS
 
+    Voxel* block = (Voxel*) calloc(VOX_BLOCK_VOX_COUNT, sizeof(Voxel));
+
+    block[0].color[0] = 1.0;
+    block[1].color[1] = 1.0;
+    block[2].color[2] = 1.0;
+    block[26].color[0] = 0.5f;
+    block[26].color[1] = 0.5f;
+
     uint32_t vertexCount;
-    createVertexGrid(
+    uint32_t indexCount;
+    createBlockVertices(
         r.device,
         r.physicalDevice,
         r.graphicsQueue,
         r.transientGraphicsCommandPool,
-        2,
+        block,
         &vertexCount,
         &r.vertexBuffer,
-        &r.vertexBufferMemory);
-
-    uint32_t indexCount;
-    createIndexBuffer(
-        r.device,
-        r.physicalDevice,
+        &r.vertexBufferMemory,
         &indexCount,
         &r.indexBuffer,
         &r.indexBufferMemory);
@@ -212,7 +215,7 @@ void drawFrame(Renderer* r)
 
     UniformBuffer uniformData;
     glm_mat4_identity(uniformData.model);
-    glm_rotate(uniformData.model, (float)glfwGetTime() * 0.4f, (vec3) { 0.0f, 0.0f, 1.0f });
+    //glm_rotate(uniformData.model, (float)glfwGetTime() * 0.4f, (vec3) { 0.0f, 0.0f, 1.0f });
     createViewMat(r->camera, uniformData.view);
     createProjMat(r->camera, uniformData.proj);
     copyDataToBuffer(r->device, &uniformData, r->uniformBuffersMemory[imageIndex], 0, sizeof(UniformBuffer));

@@ -1,6 +1,6 @@
 #include "graphics_pipeline.h"
 
-#include "scene_data/vertex_buffer.h"
+#include "scene_data/block.h"
 #include "vk_utils/exceptions.h"
 
 VkPipelineShaderStageCreateInfo createShaderStage(
