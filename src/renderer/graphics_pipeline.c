@@ -1,7 +1,11 @@
 #include "graphics_pipeline.h"
 
+#include <string.h>
+
+#include "device.h"
 #include "scene_data/block.h"
 #include "vk_utils/exceptions.h"
+#include <vulkan/vulkan_core.h>
 
 VkPipelineShaderStageCreateInfo createShaderStage(
     VkShaderModule module,
@@ -21,6 +25,7 @@ VkPipelineShaderStageCreateInfo createShaderStage(
 
 GraphicsPipeline createGraphicsPipeline(
     VkDevice device,
+    PhysicalDeviceProperties physicalDeviceProperties,
     Swapchain swapchain,
     VkShaderModule vertShader,
     VkShaderModule fragShader,
@@ -107,6 +112,22 @@ GraphicsPipeline createGraphicsPipeline(
     multisamplingInfo.alphaToCoverageEnable = VK_FALSE;
     multisamplingInfo.alphaToOneEnable = VK_FALSE;
 
+    // DEPTH STENCIL
+
+    VkPipelineDepthStencilStateCreateInfo depthStencil;
+    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.pNext = NULL;
+    depthStencil.flags = 0;
+    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthWriteEnable = VK_TRUE;
+    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.stencilTestEnable = VK_FALSE;
+    memset(&depthStencil.front, 0, sizeof(VkStencilOpState));
+    memset(&depthStencil.back, 0, sizeof(VkStencilOpState));
+    depthStencil.minDepthBounds = 0.0f;
+    depthStencil.maxDepthBounds = 1.0f;
+
     // COLOR BLENDING
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment;
@@ -164,6 +185,21 @@ GraphicsPipeline createGraphicsPipeline(
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+    VkAttachmentDescription depthAttachment;
+    depthAttachment.flags = 0;
+    depthAttachment.format = physicalDeviceProperties.depthBufferFormat;
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAtttachmentRef;
+    depthAtttachmentRef.attachment = 1;
+    depthAtttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
     VkSubpassDescription subpass;
     subpass.flags = 0;
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -172,25 +208,27 @@ GraphicsPipeline createGraphicsPipeline(
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
     subpass.pResolveAttachments = NULL;
-    subpass.pDepthStencilAttachment = NULL;
+    subpass.pDepthStencilAttachment = &depthAtttachmentRef;
     subpass.preserveAttachmentCount = 0;
     subpass.pPreserveAttachments = NULL;
 
     VkSubpassDependency subpassDependency;
     subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     subpassDependency.dstSubpass = 0;
-    subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     subpassDependency.srcAccessMask = 0;
-    subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     subpassDependency.dependencyFlags = 0;
+
+    VkAttachmentDescription attachments[] = { colorAttachment, depthAttachment };
 
     VkRenderPassCreateInfo renderPassCreateInfo;
     renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassCreateInfo.pNext = NULL;
     renderPassCreateInfo.flags = 0;
-    renderPassCreateInfo.attachmentCount = 1;
-    renderPassCreateInfo.pAttachments = &colorAttachment;
+    renderPassCreateInfo.attachmentCount = sizeof(attachments) / sizeof(attachments[0]);
+    renderPassCreateInfo.pAttachments = attachments;
     renderPassCreateInfo.subpassCount = 1;
     renderPassCreateInfo.pSubpasses = &subpass;
     renderPassCreateInfo.dependencyCount = 1;
@@ -215,7 +253,7 @@ GraphicsPipeline createGraphicsPipeline(
     pipelineCreateInfo.pViewportState = &viewportInfo;
     pipelineCreateInfo.pRasterizationState = &rasterizationInfo;
     pipelineCreateInfo.pMultisampleState = &multisamplingInfo;
-    pipelineCreateInfo.pDepthStencilState = NULL;
+    pipelineCreateInfo.pDepthStencilState = &depthStencil;
     pipelineCreateInfo.pColorBlendState = &colorBlendInfo;
     pipelineCreateInfo.pDynamicState = NULL;
     pipelineCreateInfo.layout = pipeline.pipelineLayout;

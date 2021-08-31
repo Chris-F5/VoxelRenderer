@@ -12,17 +12,18 @@ typedef struct
     VkSurfaceCapabilitiesKHR surfaceCapabilities;
     VkSurfaceFormatKHR surfaceFormat;
     VkPresentModeKHR presentMode;
+    VkFormat depthBufferFormat;
 } PhysicalDeviceProperties;
 
 bool checkValidationLayerSupport(void);
 
-VkInstance createInstance(char *appName, uint32_t appVersion, uint32_t vulkanApiVersion, bool validationLayersEnabled);
+VkInstance createInstance(char* appName, uint32_t appVersion, uint32_t vulkanApiVersion, bool validationLayersEnabled);
 
 void selectPhysicalDevice(
     VkInstance instance,
     VkSurfaceKHR surface,
-    VkPhysicalDevice *physicalDevice,
-    PhysicalDeviceProperties *physicalDeviceProperties);
+    VkPhysicalDevice* physicalDevice,
+    PhysicalDeviceProperties* physicalDeviceProperties);
 
 VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, PhysicalDeviceProperties physicalDeviceProperties, bool validationLayersEnabled);
 

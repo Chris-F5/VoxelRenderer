@@ -1,8 +1,8 @@
 #include "device.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -11,11 +11,13 @@
 
 const uint32_t QUEUE_FAMILY_DOES_NOT_EXIST = UINT32_MAX;
 
-const char *VALIDATION_LAYERS[] = {
-    "VK_LAYER_KHRONOS_validation"};
+const char* VALIDATION_LAYERS[] = {
+    "VK_LAYER_KHRONOS_validation"
+};
 
-const char *REQUIRED_DEVICE_EXTENSIONS[] = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+const char* REQUIRED_DEVICE_EXTENSIONS[] = {
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+};
 
 bool checkValidationLayerSupport(void)
 {
@@ -23,24 +25,21 @@ bool checkValidationLayerSupport(void)
     handleVkResult(
         vkEnumerateInstanceLayerProperties(&availableLayerCount, NULL),
         "getting instance layer properties count to check for validation layer support");
-    VkLayerProperties *availableLayers = (VkLayerProperties *)malloc(sizeof(VkLayerProperties) * availableLayerCount);
+    VkLayerProperties* availableLayers = (VkLayerProperties*)malloc(sizeof(VkLayerProperties) * availableLayerCount);
     handleVkResult(
         vkEnumerateInstanceLayerProperties(&availableLayerCount, availableLayers),
         "getting instance layer properties to check for validation layer support");
 
     const int validationLayerCount = sizeof(VALIDATION_LAYERS) / sizeof(VALIDATION_LAYERS[0]);
-    for (int vi = 0; vi < validationLayerCount; vi++)
-    {
+    for (int vi = 0; vi < validationLayerCount; vi++) {
         bool layerFound = false;
         for (int ai = 0; ai < availableLayerCount; ai++)
-            if (strcmp(VALIDATION_LAYERS[vi], availableLayers[ai].layerName) == 0)
-            {
+            if (strcmp(VALIDATION_LAYERS[vi], availableLayers[ai].layerName) == 0) {
                 layerFound = true;
                 break;
             }
 
-        if (!layerFound)
-        {
+        if (!layerFound) {
             free(availableLayers);
             return false;
         }
@@ -50,7 +49,7 @@ bool checkValidationLayerSupport(void)
     return true;
 }
 
-VkInstance createInstance(char *appName, uint32_t appVersion, uint32_t vulkanApiVersion, bool validationLayersEnabled)
+VkInstance createInstance(char* appName, uint32_t appVersion, uint32_t vulkanApiVersion, bool validationLayersEnabled)
 {
     VkApplicationInfo appInfo;
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -62,7 +61,7 @@ VkInstance createInstance(char *appName, uint32_t appVersion, uint32_t vulkanApi
     appInfo.apiVersion = vulkanApiVersion;
 
     uint32_t glfwExtensionCount;
-    const char **glfwExtensions;
+    const char** glfwExtensions;
     glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
     VkInstanceCreateInfo createInfo;
@@ -73,13 +72,10 @@ VkInstance createInstance(char *appName, uint32_t appVersion, uint32_t vulkanApi
     createInfo.enabledExtensionCount = glfwExtensionCount;
     createInfo.ppEnabledExtensionNames = glfwExtensions;
 
-    if (validationLayersEnabled)
-    {
+    if (validationLayersEnabled) {
         createInfo.enabledLayerCount = sizeof(VALIDATION_LAYERS) / sizeof(VALIDATION_LAYERS[0]);
         createInfo.ppEnabledLayerNames = VALIDATION_LAYERS;
-    }
-    else
-    {
+    } else {
         createInfo.enabledLayerCount = 0;
         createInfo.ppEnabledLayerNames = NULL;
     }
@@ -98,23 +94,19 @@ bool checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice)
     handleVkResult(
         vkEnumerateDeviceExtensionProperties(physicalDevice, NULL, &availableExtensionCount, NULL),
         "getting physical device extension count to check for physical device extension support");
-    VkExtensionProperties *availableExtensions =
-        (VkExtensionProperties *)malloc(sizeof(VkExtensionProperties) * availableExtensionCount);
+    VkExtensionProperties* availableExtensions = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * availableExtensionCount);
     handleVkResult(
         vkEnumerateDeviceExtensionProperties(physicalDevice, NULL, &availableExtensionCount, availableExtensions),
         "getting physical device extensions to check for physical device extension support");
 
-    for (uint32_t ri = 0; ri < sizeof(REQUIRED_DEVICE_EXTENSIONS) / sizeof(REQUIRED_DEVICE_EXTENSIONS[0]); ri++)
-    {
+    for (uint32_t ri = 0; ri < sizeof(REQUIRED_DEVICE_EXTENSIONS) / sizeof(REQUIRED_DEVICE_EXTENSIONS[0]); ri++) {
         bool layerFound = false;
         for (uint32_t ai = 0; ai < availableExtensionCount; ai++)
-            if (strcmp(REQUIRED_DEVICE_EXTENSIONS[ri], availableExtensions[ai].extensionName) == 0)
-            {
+            if (strcmp(REQUIRED_DEVICE_EXTENSIONS[ri], availableExtensions[ai].extensionName) == 0) {
                 layerFound = true;
                 break;
             }
-        if (!layerFound)
-        {
+        if (!layerFound) {
             free(availableExtensions);
             return false;
         }
@@ -125,14 +117,12 @@ bool checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice)
 
 bool chooseSwapchainSurfaceFormat(
     uint32_t availableFormatCount,
-    VkSurfaceFormatKHR *availableFormats,
-    VkSurfaceFormatKHR *chosenFormat)
+    VkSurfaceFormatKHR* availableFormats,
+    VkSurfaceFormatKHR* chosenFormat)
 {
     for (uint32_t i = 0; i < availableFormatCount; i++)
         if (
-            availableFormats[i].format == VK_FORMAT_B8G8R8A8_SRGB &&
-            availableFormats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-        {
+            availableFormats[i].format == VK_FORMAT_B8G8R8A8_SRGB && availableFormats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             *chosenFormat = availableFormats[i];
             return true;
         }
@@ -141,18 +131,16 @@ bool chooseSwapchainSurfaceFormat(
 
 bool chooseSwapchainPresentMode(
     uint32_t availablePresentModeCount,
-    VkPresentModeKHR *availablePresentModes,
-    VkPresentModeKHR *chosenPresentMode)
+    VkPresentModeKHR* availablePresentModes,
+    VkPresentModeKHR* chosenPresentMode)
 {
     for (uint32_t i = 0; i < availablePresentModeCount; i++)
-        if (availablePresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
-        {
+        if (availablePresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
             *chosenPresentMode = availablePresentModes[i];
             return true;
         }
     for (uint32_t i = 0; i < availablePresentModeCount; i++)
-        if (availablePresentModes[i] == VK_PRESENT_MODE_FIFO_KHR)
-        {
+        if (availablePresentModes[i] == VK_PRESENT_MODE_FIFO_KHR) {
             *chosenPresentMode = availablePresentModes[i];
             return true;
         }
@@ -160,23 +148,21 @@ bool chooseSwapchainPresentMode(
 }
 
 // return true if physical device is suitable
-bool getPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, PhysicalDeviceProperties *physicalDeviceProperties)
+bool getPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, PhysicalDeviceProperties* physicalDeviceProperties)
 {
     // QUEUE FAMILIES
 
     uint32_t queueFamilyCount;
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, NULL);
 
-    VkQueueFamilyProperties *queueFamilies = (VkQueueFamilyProperties *)malloc(sizeof(VkQueueFamilyProperties) * queueFamilyCount);
+    VkQueueFamilyProperties* queueFamilies = (VkQueueFamilyProperties*)malloc(sizeof(VkQueueFamilyProperties) * queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies);
 
     bool foundGraphicsFamily = false;
     bool foundPresentFamily = false;
 
-    for (uint32_t i = 0; i < queueFamilyCount; i++)
-    {
-        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
+    for (uint32_t i = 0; i < queueFamilyCount; i++) {
+        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             physicalDeviceProperties->graphicsFamilyIndex = i;
             foundGraphicsFamily = true;
         }
@@ -184,8 +170,7 @@ bool getPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkSurfaceKHR s
         handleVkResult(
             vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport),
             "checking queue family surface support to see if its suitable for a present family");
-        if (presentSupport)
-        {
+        if (presentSupport) {
             physicalDeviceProperties->presentFamilyIndex = i;
             foundPresentFamily = true;
         }
@@ -213,8 +198,7 @@ bool getPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkSurfaceKHR s
     handleVkResult(
         vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfaceFormatCount, NULL),
         "getting physical device surface formats count");
-    VkSurfaceFormatKHR *surfaceFormats =
-        (VkSurfaceFormatKHR *)malloc(sizeof(VkSurfaceFormatKHR) * surfaceFormatCount);
+    VkSurfaceFormatKHR* surfaceFormats = (VkSurfaceFormatKHR*)malloc(sizeof(VkSurfaceFormatKHR) * surfaceFormatCount);
     handleVkResult(
         vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &surfaceFormatCount, surfaceFormats),
         "getting physical device surface formats");
@@ -228,12 +212,23 @@ bool getPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkSurfaceKHR s
     handleVkResult(
         vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, NULL),
         "getting surface present modes count for swapchain creation");
-    VkPresentModeKHR *presentModes = (VkPresentModeKHR *)malloc(sizeof(VkPresentModeKHR) * presentModeCount);
+    VkPresentModeKHR* presentModes = (VkPresentModeKHR*)malloc(sizeof(VkPresentModeKHR) * presentModeCount);
     handleVkResult(
         vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes),
         "getting surface present modes for swapchain creation");
 
     if (!chooseSwapchainPresentMode(presentModeCount, presentModes, &physicalDeviceProperties->presentMode))
+        return false;
+
+    // DPETH BUFFER FORMAT
+
+    physicalDeviceProperties->depthBufferFormat = VK_FORMAT_D32_SFLOAT;
+    VkFormatProperties depthBufferFormatProperties;
+    vkGetPhysicalDeviceFormatProperties(
+        physicalDevice,
+        physicalDeviceProperties->depthBufferFormat,
+        &depthBufferFormatProperties);
+    if (!(depthBufferFormatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT))
         return false;
 
     return true;
@@ -242,27 +237,24 @@ bool getPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkSurfaceKHR s
 void selectPhysicalDevice(
     VkInstance instance,
     VkSurfaceKHR surface,
-    VkPhysicalDevice *physicalDevice,
-    PhysicalDeviceProperties *physicalDeviceProperties)
+    VkPhysicalDevice* physicalDevice,
+    PhysicalDeviceProperties* physicalDeviceProperties)
 {
     uint32_t physicalDeviceCount;
     handleVkResult(
         vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, NULL),
         "getting physical device count");
-    if (physicalDeviceCount == 0)
-    {
+    if (physicalDeviceCount == 0) {
         puts("Exiting because could not find GPU with vulkan support");
         exit(EXIT_FAILURE);
     }
-    VkPhysicalDevice *physicalDevices = (VkPhysicalDevice *)malloc(sizeof(VkPhysicalDevice) * physicalDeviceCount);
+    VkPhysicalDevice* physicalDevices = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * physicalDeviceCount);
     handleVkResult(
         vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, physicalDevices),
         "enumerating physical devices");
 
-    for (uint32_t i = 0; i < physicalDeviceCount; i++)
-    {
-        if (getPhysicalDeviceProperties(physicalDevices[i], surface, physicalDeviceProperties))
-        {
+    for (uint32_t i = 0; i < physicalDeviceCount; i++) {
+        if (getPhysicalDeviceProperties(physicalDevices[i], surface, physicalDeviceProperties)) {
             *physicalDevice = physicalDevices[i];
             free(physicalDevices);
             return;
@@ -279,23 +271,19 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, PhysicalDeviceProp
     uint32_t queueFamilyCount;
     uint32_t queueFamilyIndices[2];
 
-    if (physicalDeviceProperties.graphicsFamilyIndex == physicalDeviceProperties.presentFamilyIndex)
-    {
+    if (physicalDeviceProperties.graphicsFamilyIndex == physicalDeviceProperties.presentFamilyIndex) {
         queueFamilyCount = 1;
         queueFamilyIndices[0] = physicalDeviceProperties.graphicsFamilyIndex;
-    }
-    else
-    {
+    } else {
         queueFamilyCount = 2;
         queueFamilyIndices[0] = physicalDeviceProperties.graphicsFamilyIndex;
         queueFamilyIndices[1] = physicalDeviceProperties.presentFamilyIndex;
     }
 
-    VkDeviceQueueCreateInfo *queueCreateInfos = (VkDeviceQueueCreateInfo *)malloc(sizeof(VkDeviceQueueCreateInfo) * queueFamilyCount);
+    VkDeviceQueueCreateInfo* queueCreateInfos = (VkDeviceQueueCreateInfo*)malloc(sizeof(VkDeviceQueueCreateInfo) * queueFamilyCount);
 
     float generalQueuePriority = 1.0;
-    for (uint32_t i = 0; i < queueFamilyCount; i++)
-    {
+    for (uint32_t i = 0; i < queueFamilyCount; i++) {
         queueCreateInfos[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queueCreateInfos[i].pNext = NULL;
         queueCreateInfos[i].flags = 0;
@@ -313,13 +301,10 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, PhysicalDeviceProp
     deviceCreateInfo.flags = 0;
     deviceCreateInfo.queueCreateInfoCount = queueFamilyCount;
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos;
-    if (validationLayersEnabled)
-    {
+    if (validationLayersEnabled) {
         deviceCreateInfo.enabledLayerCount = sizeof(VALIDATION_LAYERS) / sizeof(VALIDATION_LAYERS[0]);
         deviceCreateInfo.ppEnabledLayerNames = VALIDATION_LAYERS;
-    }
-    else
-    {
+    } else {
         deviceCreateInfo.enabledLayerCount = 0;
         deviceCreateInfo.ppEnabledLayerNames = NULL;
     }

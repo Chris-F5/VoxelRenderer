@@ -14,6 +14,7 @@ typedef struct
 
 GraphicsPipeline createGraphicsPipeline(
     VkDevice device,
+    PhysicalDeviceProperties physicalDeviceProperties,
     Swapchain swapchain,
     VkShaderModule vertShader,
     VkShaderModule fragShader,

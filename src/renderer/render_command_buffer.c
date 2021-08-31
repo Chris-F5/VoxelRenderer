@@ -1,5 +1,7 @@
 #include "render_command_buffer.h"
 
+#include <string.h>
+
 #include "vk_utils/command_buffer.h"
 #include "vk_utils/exceptions.h"
 
@@ -30,21 +32,14 @@ VkCommandBuffer* createRenderCommandBuffers(
             vkBeginCommandBuffer(commandBuffers[i], &beginInfo),
             "begin recording render command buffers");
 
-        VkClearValue clearColor;
-        clearColor.color.float32[0] = 0.0;
-        clearColor.color.float32[1] = 0.0;
-        clearColor.color.float32[2] = 0.0;
-        clearColor.color.float32[3] = 1.0;
-        clearColor.color.int32[0] = 0;
-        clearColor.color.int32[1] = 0;
-        clearColor.color.int32[2] = 0;
-        clearColor.color.int32[3] = 0;
-        clearColor.color.uint32[0] = 0;
-        clearColor.color.uint32[1] = 0;
-        clearColor.color.uint32[2] = 0;
-        clearColor.color.uint32[3] = 0;
-        clearColor.depthStencil.depth = 0.0;
-        clearColor.depthStencil.stencil = 0.0;
+        VkClearValue clearValues[2];
+        memset(clearValues, 0, sizeof(clearValues));
+        clearValues[0].color.float32[0] = 0.0f;
+        clearValues[0].color.float32[1] = 0.0f;
+        clearValues[0].color.float32[2] = 0.0f;
+        clearValues[0].color.float32[3] = 1.0f;
+
+        clearValues[1].depthStencil.depth = 1.0f;
 
         VkRenderPassBeginInfo renderPassInfo;
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -53,8 +48,8 @@ VkCommandBuffer* createRenderCommandBuffers(
         renderPassInfo.framebuffer = framebuffers[i];
         renderPassInfo.renderArea.offset = (VkOffset2D) { 0, 0 };
         renderPassInfo.renderArea.extent = extent;
-        renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues = &clearColor;
+        renderPassInfo.clearValueCount = sizeof(clearValues) / sizeof(clearValues[0]);
+        renderPassInfo.pClearValues = clearValues;
 
         vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -75,7 +70,7 @@ VkCommandBuffer* createRenderCommandBuffers(
             0,
             NULL);
 
-        vkCmdDrawIndexed(commandBuffers[i], indexCount, 1, 0, 0, 0); 
+        vkCmdDrawIndexed(commandBuffers[i], indexCount, 1, 0, 0, 0);
 
         vkCmdEndRenderPass(commandBuffers[i]);
 

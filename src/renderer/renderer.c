@@ -5,6 +5,7 @@
 
 #include <cglm/cglm.h>
 
+#include "depth_buffer.h"
 #include "descriptor_set.h"
 #include "render_command_buffer.h"
 #include "scene_data/block.h"
@@ -51,6 +52,17 @@ Renderer createRenderer(GLFWwindow* window)
 
     r.swapchain = createSwapchain(r.device, r.physicalDevice, r.physicalDeviceProperties, window, r.surface);
 
+    // DEPTH BUFFER
+
+    createDepthBuffer(
+        r.device,
+        r.physicalDevice,
+        r.physicalDeviceProperties.depthBufferFormat,
+        r.swapchain.extent,
+        &r.depthImage,
+        &r.depthImageMemory,
+        &r.depthImageView);
+
     // COMMAND POOLS
 
     r.graphicsCommandPool = createCommandPool(r.device, 0, r.physicalDeviceProperties.graphicsFamilyIndex);
@@ -61,7 +73,7 @@ Renderer createRenderer(GLFWwindow* window)
 
     // GPU MEMORY AND DESCRIPTOR SETS
 
-    Voxel* block = (Voxel*) calloc(VOX_BLOCK_VOX_COUNT, sizeof(Voxel));
+    Voxel* block = (Voxel*)calloc(VOX_BLOCK_VOX_COUNT, sizeof(Voxel));
 
     block[0].color[0] = 1.0;
     block[1].color[1] = 1.0;
@@ -104,6 +116,7 @@ Renderer createRenderer(GLFWwindow* window)
 
     r.graphicsPipeline = createGraphicsPipeline(
         r.device,
+        r.physicalDeviceProperties,
         r.swapchain,
         vertShader,
         fragShader,
@@ -116,13 +129,15 @@ Renderer createRenderer(GLFWwindow* window)
 
     r.framebuffers = (VkFramebuffer*)malloc(r.swapchain.imageCount * sizeof(VkFramebuffer));
     for (int i = 0; i < r.swapchain.imageCount; i++) {
+        VkImageView attachments[] = { r.swapchain.imageViews[i], r.depthImageView };
+
         VkFramebufferCreateInfo framebufferCreateInfo;
         framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferCreateInfo.pNext = NULL;
         framebufferCreateInfo.flags = 0;
         framebufferCreateInfo.renderPass = r.graphicsPipeline.renderPass;
-        framebufferCreateInfo.attachmentCount = 1;
-        framebufferCreateInfo.pAttachments = &r.swapchain.imageViews[i];
+        framebufferCreateInfo.attachmentCount = sizeof(attachments) / sizeof(attachments[0]);
+        framebufferCreateInfo.pAttachments = attachments;
         framebufferCreateInfo.width = r.swapchain.extent.width;
         framebufferCreateInfo.height = r.swapchain.extent.height;
         framebufferCreateInfo.layers = 1;
@@ -285,6 +300,10 @@ void cleanupRenderer(Renderer r)
 
     cleanupGraphicsPipeline(r.device, r.graphicsPipeline);
     cleanupSwapchain(r.device, r.swapchain);
+
+    vkDestroyImage(r.device, r.depthImage, NULL);
+    vkFreeMemory(r.device, r.depthImageMemory, NULL);
+    vkDestroyImageView(r.device, r.depthImageView, NULL);
 
     vkDestroyBuffer(r.device, r.indexStagingBuffer, NULL);
     vkFreeMemory(r.device, r.indexStagingBufferMemory, NULL);

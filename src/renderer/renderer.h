@@ -29,6 +29,9 @@ typedef struct
     VkQueue graphicsQueue;
     VkQueue presentQueue;
     Swapchain swapchain;
+    VkImage depthImage;
+    VkDeviceMemory depthImageMemory;
+    VkImageView depthImageView;
     GraphicsPipeline graphicsPipeline;
     VkFramebuffer* framebuffers;
     VkBuffer vertexBuffer;

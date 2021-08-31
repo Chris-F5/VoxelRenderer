@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "vk_utils/exceptions.h"
+#include "vk_utils/image.h"
 
 uint32_t min(uint32_t x, uint32_t y)
 {
@@ -14,31 +15,26 @@ uint32_t max(uint32_t x, uint32_t y)
     return (x > y) ? x : y;
 }
 
-VkExtent2D chooseExtent(GLFWwindow *window, VkSurfaceCapabilitiesKHR surfaceCapabilities)
+VkExtent2D chooseExtent(GLFWwindow* window, VkSurfaceCapabilitiesKHR surfaceCapabilities)
 {
-    if (surfaceCapabilities.currentExtent.width != UINT32_MAX)
-    {
+    if (surfaceCapabilities.currentExtent.width != UINT32_MAX) {
         return surfaceCapabilities.currentExtent;
-    }
-    else
-    {
+    } else {
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
 
         VkExtent2D extent;
 
-        extent.width =
-            min(
-                surfaceCapabilities.maxImageExtent.width,
-                max(
-                    width,
-                    surfaceCapabilities.maxImageExtent.width));
-        extent.height =
-            min(
-                surfaceCapabilities.maxImageExtent.height,
-                max(
-                    height,
-                    surfaceCapabilities.maxImageExtent.height));
+        extent.width = min(
+            surfaceCapabilities.maxImageExtent.width,
+            max(
+                width,
+                surfaceCapabilities.maxImageExtent.width));
+        extent.height = min(
+            surfaceCapabilities.maxImageExtent.height,
+            max(
+                height,
+                surfaceCapabilities.maxImageExtent.height));
 
         return extent;
     }
@@ -48,15 +44,14 @@ Swapchain createSwapchain(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     PhysicalDeviceProperties physicalDeviceProperties,
-    GLFWwindow *window,
+    GLFWwindow* window,
     VkSurfaceKHR surface)
 {
     Swapchain swapchain;
     swapchain.extent = chooseExtent(window, physicalDeviceProperties.surfaceCapabilities);
     swapchain.format = physicalDeviceProperties.surfaceFormat.format;
     swapchain.imageCount = physicalDeviceProperties.surfaceCapabilities.minImageCount + 1;
-    if (physicalDeviceProperties.surfaceCapabilities.maxImageCount != 0 &&
-        swapchain.imageCount > physicalDeviceProperties.surfaceCapabilities.maxImageCount)
+    if (physicalDeviceProperties.surfaceCapabilities.maxImageCount != 0 && swapchain.imageCount > physicalDeviceProperties.surfaceCapabilities.maxImageCount)
         swapchain.imageCount = physicalDeviceProperties.surfaceCapabilities.maxImageCount;
 
     VkSwapchainCreateInfoKHR swapchainCreateInfo;
@@ -70,15 +65,12 @@ Swapchain createSwapchain(
     swapchainCreateInfo.imageExtent = swapchain.extent;
     swapchainCreateInfo.imageArrayLayers = 1;
     swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    if (physicalDeviceProperties.graphicsFamilyIndex != physicalDeviceProperties.presentFamilyIndex)
-    {
+    if (physicalDeviceProperties.graphicsFamilyIndex != physicalDeviceProperties.presentFamilyIndex) {
         swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        uint32_t queueFamilyIndices[] = {physicalDeviceProperties.graphicsFamilyIndex, physicalDeviceProperties.presentFamilyIndex};
+        uint32_t queueFamilyIndices[] = { physicalDeviceProperties.graphicsFamilyIndex, physicalDeviceProperties.presentFamilyIndex };
         swapchainCreateInfo.queueFamilyIndexCount = sizeof(queueFamilyIndices) / sizeof(queueFamilyIndices[0]);
         swapchainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
-    }
-    else
-    {
+    } else {
         swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         swapchainCreateInfo.queueFamilyIndexCount = 0;
         swapchainCreateInfo.pQueueFamilyIndices = NULL;
@@ -96,34 +88,26 @@ Swapchain createSwapchain(
     handleVkResult(
         vkGetSwapchainImagesKHR(device, swapchain.swapchain, &swapchain.imageCount, NULL),
         "getting swapchain image count");
-    swapchain.images = (VkImage *)malloc(swapchain.imageCount * sizeof(VkImage));
+    swapchain.images = (VkImage*)malloc(swapchain.imageCount * sizeof(VkImage));
     handleVkResult(
         vkGetSwapchainImagesKHR(device, swapchain.swapchain, &swapchain.imageCount, swapchain.images),
         "getting swapchain images");
 
-    swapchain.imageViews = (VkImageView *)malloc(swapchain.imageCount * sizeof(VkImageView));
-    for (int i = 0; i < swapchain.imageCount; i++)
-    {
-        VkImageViewCreateInfo imageViewCreateInfo;
-        imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        imageViewCreateInfo.pNext = NULL;
-        imageViewCreateInfo.flags = 0;
-        imageViewCreateInfo.image = swapchain.images[i];
-        imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        imageViewCreateInfo.format = swapchain.format;
-        imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-        imageViewCreateInfo.subresourceRange.levelCount = 1;
-        imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-        imageViewCreateInfo.subresourceRange.layerCount = 1;
+    swapchain.imageViews = (VkImageView*)malloc(swapchain.imageCount * sizeof(VkImageView));
+    for (int i = 0; i < swapchain.imageCount; i++) {
+        VkImageSubresourceRange subresourceRange;
+        subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        subresourceRange.baseMipLevel = 0;
+        subresourceRange.levelCount = 1;
+        subresourceRange.baseArrayLayer = 0;
+        subresourceRange.layerCount = 1;
 
-        handleVkResult(
-            vkCreateImageView(device, &imageViewCreateInfo, NULL, &swapchain.imageViews[i]),
-            "creating swapchain image view");
+        swapchain.imageViews[i] = createImageView(
+            device,
+            swapchain.images[i],
+            swapchain.format,
+            VK_IMAGE_VIEW_TYPE_2D,
+            subresourceRange);
     }
 
     return swapchain;
