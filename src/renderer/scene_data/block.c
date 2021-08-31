@@ -14,7 +14,6 @@ const VertexIndex INDEX_BUFFER[] = {
     4, 1, 0,
     4, 5, 1
 };
-
 const VkVertexInputBindingDescription VERTEX_BINDING_DESCRIPTIONS[] = {
     { 0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX }
 };
@@ -30,58 +29,58 @@ const uint32_t VOX_BLOCK_SCALE = 3;
 const uint32_t VOX_BLOCK_VOX_COUNT = VOX_BLOCK_SCALE * VOX_BLOCK_SCALE * VOX_BLOCK_SCALE;
 
 const vec3 FACE_POINTS_XP[] = {
-    {1, 0, 0 },
-    {1, 1, 0 },
-    {1, 0, 1 },
+    { 1, 0, 0 },
+    { 1, 1, 0 },
+    { 1, 0, 1 },
 
-    {1, 1, 0 },
-    {1, 1, 1 },
-    {1, 0, 1 }
+    { 1, 1, 0 },
+    { 1, 1, 1 },
+    { 1, 0, 1 }
 };
 const vec3 FACE_POINTS_XN[] = {
-    {0, 0, 0 },
-    {0, 0, 1 },
-    {0, 1, 0 },
+    { 0, 0, 0 },
+    { 0, 0, 1 },
+    { 0, 1, 0 },
 
-    {0, 1, 0 },
-    {0, 0, 1 },
-    {0, 1, 1 }
+    { 0, 1, 0 },
+    { 0, 0, 1 },
+    { 0, 1, 1 }
 };
 const vec3 FACE_POINTS_YP[] = {
-    {0, 1, 0 },
-    {0, 1, 1 },
-    {1, 1, 0 },
+    { 0, 1, 0 },
+    { 0, 1, 1 },
+    { 1, 1, 0 },
 
-    {1, 1, 0 },
-    {0, 1, 1 },
-    {1, 1, 1 }
+    { 1, 1, 0 },
+    { 0, 1, 1 },
+    { 1, 1, 1 }
 };
 const vec3 FACE_POINTS_YN[] = {
-    {0, 0, 0 },
-    {1, 0, 0 },
-    {0, 0, 1 },
+    { 0, 0, 0 },
+    { 1, 0, 0 },
+    { 0, 0, 1 },
 
-    {1, 0, 0 },
-    {1, 0, 1 },
-    {0, 0, 1 }
+    { 1, 0, 0 },
+    { 1, 0, 1 },
+    { 0, 0, 1 }
 };
 const vec3 FACE_POINTS_ZP[] = {
-    {0, 0, 1 },
-    {1, 0, 1 },
-    {0, 1, 1 },
+    { 0, 0, 1 },
+    { 1, 0, 1 },
+    { 0, 1, 1 },
 
-    {1, 0, 1 },
-    {1, 1, 1 },
-    {0, 1, 1 }
+    { 1, 0, 1 },
+    { 1, 1, 1 },
+    { 0, 1, 1 }
 };
 const vec3 FACE_POINTS_ZN[] = {
-    {0, 0, 0 },
-    {0, 1, 0 },
-    {1, 0, 0 },
+    { 0, 0, 0 },
+    { 0, 1, 0 },
+    { 1, 0, 0 },
 
-    {1, 0, 0 },
-    {0, 1, 0 },
-    {1, 1, 0 }
+    { 1, 0, 0 },
+    { 0, 1, 0 },
+    { 1, 1, 0 }
 };
 
 void createVertexBuffer(
@@ -205,13 +204,30 @@ void addFace(
 {
     for (int i = 0; i < 6; i++) {
         vec3 pos;
-        vec3 point = {facePoints[i][0], facePoints[i][1], facePoints[i][2]};
-        glm_vec3_add(point, (vec3){x, y, z}, pos);
+        vec3 point = { facePoints[i][0], facePoints[i][1], facePoints[i][2] };
+        glm_vec3_add(point, (vec3) { x, y, z }, pos);
         setVertex(pos, color, &vertices[*vertexCount]);
         *vertexCount += 1;
         indices[*indexCount] = *indexCount;
         *indexCount += 1;
     }
+}
+
+bool isBlockPresent(
+    uint32_t x,
+    uint32_t y,
+    uint32_t z,
+    const Voxel* block)
+{
+    if (x >= VOX_BLOCK_SCALE || x < 0)
+        return false;
+    if (y >= VOX_BLOCK_SCALE || y < 0)
+        return false;
+    if (z >= VOX_BLOCK_SCALE || z < 0)
+        return false;
+
+    uint32_t i = x + y * VOX_BLOCK_SCALE + z * VOX_BLOCK_SCALE * VOX_BLOCK_SCALE;
+    return block[i].color[0] != 0 || block[i].color[1] != 0 || block[i].color[2] != 0;
 }
 
 void createBlockVertices(
@@ -240,12 +256,18 @@ void createBlockVertices(
             int y = i / VOX_BLOCK_SCALE % VOX_BLOCK_SCALE;
             int z = i / (VOX_BLOCK_SCALE * VOX_BLOCK_SCALE);
 
-            addFace(x, y, z, FACE_POINTS_XP, block[i].color, vertexCount, vertices, indexCount, indices);
-            addFace(x, y, z, FACE_POINTS_XN, block[i].color, vertexCount, vertices, indexCount, indices);
-            addFace(x, y, z, FACE_POINTS_YP, block[i].color, vertexCount, vertices, indexCount, indices);
-            addFace(x, y, z, FACE_POINTS_YN, block[i].color, vertexCount, vertices, indexCount, indices);
-            addFace(x, y, z, FACE_POINTS_ZP, block[i].color, vertexCount, vertices, indexCount, indices);
-            addFace(x, y, z, FACE_POINTS_ZN, block[i].color, vertexCount, vertices, indexCount, indices);
+            if (!isBlockPresent(x + 1, y + 0, z + 0, block))
+                addFace(x, y, z, FACE_POINTS_XP, block[i].color, vertexCount, vertices, indexCount, indices);
+            if (!isBlockPresent(x - 1, y + 0, z + 0, block))
+                addFace(x, y, z, FACE_POINTS_XN, block[i].color, vertexCount, vertices, indexCount, indices);
+            if (!isBlockPresent(x + 0, y + 1, z + 0, block))
+                addFace(x, y, z, FACE_POINTS_YP, block[i].color, vertexCount, vertices, indexCount, indices);
+            if (!isBlockPresent(x + 0, y - 1, z + 0, block))
+                addFace(x, y, z, FACE_POINTS_YN, block[i].color, vertexCount, vertices, indexCount, indices);
+            if (!isBlockPresent(x + 0, y + 0, z + 1, block))
+                addFace(x, y, z, FACE_POINTS_ZP, block[i].color, vertexCount, vertices, indexCount, indices);
+            if (!isBlockPresent(x + 0, y + 0, z - 1, block))
+                addFace(x, y, z, FACE_POINTS_ZN, block[i].color, vertexCount, vertices, indexCount, indices);
         }
 
     createVertexBuffer(
