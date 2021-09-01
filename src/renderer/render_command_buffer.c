@@ -15,9 +15,10 @@ VkCommandBuffer* createRenderCommandBuffers(
     VkPipelineLayout graphicsPipelineLayout,
     const VkFramebuffer* framebuffers,
     const VkDescriptorSet* descriptorSets,
-    uint32_t indexCount,
-    VkBuffer vertexBuffer,
-    VkBuffer indexBuffer,
+    uint32_t modelCount,
+    const uint32_t* indexCounts,
+    const VkBuffer* vertexBuffers,
+    const VkBuffer* indexBuffers,
     VkCommandBuffer* commandBuffers)
 {
     allocateCommandBuffers(device, commandPool, count, commandBuffers);
@@ -56,9 +57,6 @@ VkCommandBuffer* createRenderCommandBuffers(
         vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
         VkDeviceSize vertexBufferOffsets[] = { 0 };
-        vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffer, vertexBufferOffsets);
-
-        vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         vkCmdBindDescriptorSets(
             commandBuffers[i],
@@ -70,7 +68,13 @@ VkCommandBuffer* createRenderCommandBuffers(
             0,
             NULL);
 
-        vkCmdDrawIndexed(commandBuffers[i], indexCount, 1, 0, 0, 0);
+        for (int m = 0; m < modelCount; m++) {
+            vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffers[m], vertexBufferOffsets);
+
+            vkCmdBindIndexBuffer(commandBuffers[i], indexBuffers[m], 0, VK_INDEX_TYPE_UINT32);
+
+            vkCmdDrawIndexed(commandBuffers[i], indexCounts[m], 1, 0, 0, 0);
+        }
 
         vkCmdEndRenderPass(commandBuffers[i]);
 

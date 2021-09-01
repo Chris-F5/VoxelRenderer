@@ -13,9 +13,10 @@ VkCommandBuffer* createRenderCommandBuffers(
     VkPipelineLayout graphicsPipelineLayout,
     const VkFramebuffer* framebuffers,
     const VkDescriptorSet* descriptorSets,
-    uint32_t indexCount,
-    VkBuffer vertexBuffer,
-    VkBuffer indexBuffer,
+    uint32_t modelCount,
+    const uint32_t* indexCounts,
+    const VkBuffer* vertexBuffers,
+    const VkBuffer* indexBuffers,
     VkCommandBuffer* commandBuffers);
 
 #endif

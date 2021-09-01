@@ -36,12 +36,12 @@ typedef struct
     VkFramebuffer* framebuffers;
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
-    VkBuffer vertexStagingBuffer;
-    VkDeviceMemory vertexStagingMemory;
     VkBuffer indexBuffer;
     VkDeviceMemory indexBufferMemory;
-    VkBuffer indexStagingBuffer;
-    VkDeviceMemory indexStagingBufferMemory;
+    VkBuffer vertexBufferB;
+    VkDeviceMemory vertexBufferMemoryB;
+    VkBuffer indexBufferB;
+    VkDeviceMemory indexBufferMemoryB;
     VkDescriptorPool descriptorPool;
     VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorSet* descriptorSets;

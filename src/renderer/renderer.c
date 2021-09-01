@@ -96,6 +96,26 @@ Renderer createRenderer(GLFWwindow* window)
         &r.indexBuffer,
         &r.indexBufferMemory);
 
+    Voxel* blockB = (Voxel*)calloc(VOX_BLOCK_VOX_COUNT, sizeof(Voxel));
+
+    blockB[24].color[2] = 0.5f;
+    blockB[24].color[1] = 0.5f;
+
+    uint32_t vertexCountB;
+    uint32_t indexCountB;
+    createBlockVertices(
+        r.device,
+        r.physicalDevice,
+        r.graphicsQueue,
+        r.transientGraphicsCommandPool,
+        blockB,
+        &vertexCountB,
+        &r.vertexBufferB,
+        &r.vertexBufferMemoryB,
+        &indexCountB,
+        &r.indexBufferB,
+        &r.indexBufferMemoryB);
+
     r.descriptorSets = malloc(r.swapchain.imageCount * sizeof(VkDescriptorSet));
     r.uniformBuffers = malloc(r.swapchain.imageCount * sizeof(VkBuffer));
     r.uniformBuffersMemory = malloc(r.swapchain.imageCount * sizeof(VkDeviceMemory));
@@ -149,6 +169,10 @@ Renderer createRenderer(GLFWwindow* window)
 
     // COMMAND BUFFERS
 
+    VkBuffer vertexBuffers[] = {r.vertexBuffer, r.vertexBufferB};
+    uint32_t indexCounts[] = {indexCount, indexCountB};
+    VkBuffer indexBuffers[] = {r.indexBuffer, r.indexBufferB};
+
     r.commandBuffers = (VkCommandBuffer*)malloc(r.swapchain.imageCount * sizeof(VkCommandBuffer));
     createRenderCommandBuffers(
         r.device,
@@ -160,9 +184,10 @@ Renderer createRenderer(GLFWwindow* window)
         r.graphicsPipeline.pipelineLayout,
         r.framebuffers,
         r.descriptorSets,
-        indexCount,
-        r.vertexBuffer,
-        r.indexBuffer,
+        sizeof(vertexBuffers) / sizeof(vertexBuffers[0]),
+        indexCounts,
+        vertexBuffers,
+        indexBuffers,
         r.commandBuffers);
 
     // SYNCHRONIZATION OBJECTS
@@ -305,15 +330,17 @@ void cleanupRenderer(Renderer r)
     vkFreeMemory(r.device, r.depthImageMemory, NULL);
     vkDestroyImageView(r.device, r.depthImageView, NULL);
 
-    vkDestroyBuffer(r.device, r.indexStagingBuffer, NULL);
-    vkFreeMemory(r.device, r.indexStagingBufferMemory, NULL);
     vkDestroyBuffer(r.device, r.indexBuffer, NULL);
     vkFreeMemory(r.device, r.indexBufferMemory, NULL);
 
-    vkDestroyBuffer(r.device, r.vertexStagingBuffer, NULL);
-    vkFreeMemory(r.device, r.vertexStagingMemory, NULL);
     vkDestroyBuffer(r.device, r.vertexBuffer, NULL);
     vkFreeMemory(r.device, r.vertexBufferMemory, NULL);
+
+    vkDestroyBuffer(r.device, r.indexBufferB, NULL);
+    vkFreeMemory(r.device, r.indexBufferMemoryB, NULL);
+
+    vkDestroyBuffer(r.device, r.vertexBufferB, NULL);
+    vkFreeMemory(r.device, r.vertexBufferMemoryB, NULL);
 
     vkDestroyDevice(r.device, NULL);
     vkDestroySurfaceKHR(r.instance, r.surface, NULL);
