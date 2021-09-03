@@ -2,13 +2,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <cglm/cglm.h>
 
 #include "depth_buffer.h"
-#include "descriptor_set.h"
+#include "global_descriptor_set.h"
 #include "render_command_buffer.h"
-#include "scene_data/block.h"
 #include "shader_module.h"
 
 #include "vk_utils/buffer.h"
@@ -73,53 +73,44 @@ Renderer createRenderer(GLFWwindow* window)
 
     // GPU MEMORY AND DESCRIPTOR SETS
 
-    Voxel* block = (Voxel*)calloc(VOX_BLOCK_VOX_COUNT, sizeof(Voxel));
+    r.globalDescriptorSetLayout = createGlobalDescriptorSetLayout(r.device);
+    r.blockDescriptorSetLayout = createBlockDescriptorSetLayout(r.device);
 
-    block[0].color[0] = 1.0;
-    block[1].color[1] = 1.0;
-    block[2].color[2] = 1.0;
-    block[26].color[0] = 0.5f;
-    block[26].color[1] = 0.5f;
+    r.blockDescriptorPool = createBlockDescriptorPool(r.device, r.swapchain.imageCount, 2);
 
-    uint32_t vertexCount;
-    uint32_t indexCount;
-    createBlockVertices(
-        r.device,
-        r.physicalDevice,
-        r.graphicsQueue,
-        r.transientGraphicsCommandPool,
-        block,
-        &vertexCount,
-        &r.vertexBuffer,
-        &r.vertexBufferMemory,
-        &indexCount,
-        &r.indexBuffer,
-        &r.indexBufferMemory);
+    {
+        Voxel* blockVoxels = (Voxel*)malloc(VOX_BLOCK_VOX_COUNT * sizeof(Voxel));
+        memset(blockVoxels, 0, VOX_BLOCK_VOX_COUNT * sizeof(Voxel));
 
-    Voxel* blockB = (Voxel*)calloc(VOX_BLOCK_VOX_COUNT, sizeof(Voxel));
+        blockVoxels[0].color[0] = 1.0f;
+        blockVoxels[1].color[1] = 1.0f;
+        blockVoxels[2].color[2] = 1.0f;
+        blockVoxels[26].color[0] = 0.5f;
+        blockVoxels[26].color[1] = 0.5f;
 
-    blockB[24].color[2] = 0.5f;
-    blockB[24].color[1] = 0.5f;
+        r.blockA = createBlock(
+            r.device,
+            r.physicalDevice,
+            r.blockDescriptorSetLayout,
+            r.blockDescriptorPool,
+            r.swapchain.imageCount,
+            blockVoxels);
 
-    uint32_t vertexCountB;
-    uint32_t indexCountB;
-    createBlockVertices(
-        r.device,
-        r.physicalDevice,
-        r.graphicsQueue,
-        r.transientGraphicsCommandPool,
-        blockB,
-        &vertexCountB,
-        &r.vertexBufferB,
-        &r.vertexBufferMemoryB,
-        &indexCountB,
-        &r.indexBufferB,
-        &r.indexBufferMemoryB);
+        memset(blockVoxels, 0, VOX_BLOCK_VOX_COUNT * sizeof(Voxel));
 
-    createDescriptorSetLayouts(
-        r.device,
-        &r.globalDescriptorSetLayout,
-        &r.meshDescriptorSetLayout);
+        blockVoxels[24].color[1] = 0.5f;
+        blockVoxels[24].color[2] = 0.5f;
+
+        r.blockB = createBlock(
+            r.device,
+            r.physicalDevice,
+            r.blockDescriptorSetLayout,
+            r.blockDescriptorPool,
+            r.swapchain.imageCount,
+            blockVoxels);
+
+        free(blockVoxels);
+    }
 
     r.globalDescriptorSets = malloc(r.swapchain.imageCount * sizeof(VkDescriptorSet));
     r.globalUniformBuffers = malloc(r.swapchain.imageCount * sizeof(VkBuffer));
@@ -134,50 +125,19 @@ Renderer createRenderer(GLFWwindow* window)
         r.globalUniformBuffers,
         r.globalUniformBuffersMemory);
 
-    createMeshDescriptorPool(
-        r.device,
-        2 * r.swapchain.imageCount,
-        &r.meshDescriptorPool);
-
-    r.meshDescriptorSets = malloc(r.swapchain.imageCount * sizeof(VkDescriptorSet));
-    r.meshUniformBuffers = malloc(r.swapchain.imageCount * sizeof(VkBuffer));
-    r.meshUniformBuffersMemory = malloc(r.swapchain.imageCount * sizeof(VkDeviceMemory));
-    createMeshDescriptorSets(
-        r.device,
-        r.physicalDevice,
-        r.meshDescriptorSetLayout,
-        r.swapchain.imageCount,
-        r.meshDescriptorPool,
-        r.meshDescriptorSets,
-        r.meshUniformBuffers,
-        r.meshUniformBuffersMemory);
-
-    r.meshBDescriptorSets = malloc(r.swapchain.imageCount * sizeof(VkDescriptorSet));
-    r.meshBUniformBuffers = malloc(r.swapchain.imageCount * sizeof(VkBuffer));
-    r.meshBUniformBuffersMemory = malloc(r.swapchain.imageCount * sizeof(VkDeviceMemory));
-    createMeshDescriptorSets(
-        r.device,
-        r.physicalDevice,
-        r.meshDescriptorSetLayout,
-        r.swapchain.imageCount,
-        r.meshDescriptorPool,
-        r.meshBDescriptorSets,
-        r.meshBUniformBuffers,
-        r.meshBUniformBuffersMemory);
-
     // GRAPHICS PIPELINE
 
     VkShaderModule vertShader = createShaderModule(r.device, "shader.vert.spv");
     VkShaderModule fragShader = createShaderModule(r.device, "shader.frag.spv");
 
-    VkDescriptorSetLayout descriptorSetLayouts[] = { r.globalDescriptorSetLayout, r.meshDescriptorSetLayout };
+    VkDescriptorSetLayout descriptorSetLayouts[] = { r.globalDescriptorSetLayout, r.blockDescriptorSetLayout };
     r.graphicsPipeline = createGraphicsPipeline(
         r.device,
         r.physicalDeviceProperties,
         r.swapchain,
         vertShader,
         fragShader,
-        2,
+        sizeof(descriptorSetLayouts) / sizeof(descriptorSetLayouts[0]),
         descriptorSetLayouts);
 
     vkDestroyShaderModule(r.device, vertShader, NULL);
@@ -207,10 +167,9 @@ Renderer createRenderer(GLFWwindow* window)
 
     // COMMAND BUFFERS
 
-    VkBuffer vertexBuffers[] = { r.vertexBuffer, r.vertexBufferB };
-    uint32_t indexCounts[] = { indexCount, indexCountB };
-    VkBuffer indexBuffers[] = { r.indexBuffer, r.indexBufferB };
-    VkDescriptorSet* meshDescriptorSets[] = { r.meshDescriptorSets, r.meshBDescriptorSets };
+    uint32_t vertexCounts[] = { r.blockA.vertexBufferLength, r.blockB.vertexBufferLength };
+    VkBuffer vertexBuffers[] = { r.blockA.vertexBuffer, r.blockB.vertexBuffer };
+    VkDescriptorSet* blockDescriptorSets[] = { r.blockA.descriptorSets, r.blockB.descriptorSets };
 
     r.commandBuffers = (VkCommandBuffer*)malloc(r.swapchain.imageCount * sizeof(VkCommandBuffer));
     createRenderCommandBuffers(
@@ -224,10 +183,9 @@ Renderer createRenderer(GLFWwindow* window)
         r.framebuffers,
         r.globalDescriptorSets,
         sizeof(vertexBuffers) / sizeof(vertexBuffers[0]),
-        meshDescriptorSets,
-        indexCounts,
+        blockDescriptorSets,
+        vertexCounts,
         vertexBuffers,
-        indexBuffers,
         r.commandBuffers);
 
     // SYNCHRONIZATION OBJECTS
@@ -291,8 +249,6 @@ void drawFrame(Renderer* r)
         }
     r->swapchainImagesInFlight[imageIndex] = r->currentFrame;
 
-    // TODO: rotate r->globalUniformData
-
     GlobalUniformBuffer globalUniformData;
     createViewMat(r->camera, globalUniformData.view);
     createProjMat(r->camera, globalUniformData.proj);
@@ -303,26 +259,27 @@ void drawFrame(Renderer* r)
         0,
         sizeof(GlobalUniformBuffer));
 
-    MeshUniformBuffer meshUniformData;
-    glm_mat4_identity(meshUniformData.model);
-    glm_rotate(meshUniformData.model, (float)glfwGetTime() * 0.8f, (vec3) { 0.0f, 0.0f, 1.0f });
-    glm_translate(meshUniformData.model, (vec3) { 0.0f, 0.0f, 3.0f });
+    BlockDescriptorUniformBuffer blockAUniformData;
+    glm_mat4_identity(blockAUniformData.model);
+    glm_rotate(blockAUniformData.model, (float)glfwGetTime() * 0.8f, (vec3) { 0.0f, 0.0f, 1.0f });
+    glm_translate(blockAUniformData.model, (vec3) { 0.0f, 0.0f, 3.0f });
     copyDataToBuffer(
         r->device,
-        &meshUniformData,
-        r->meshUniformBuffersMemory[imageIndex],
+        &blockAUniformData,
+        r->blockA.descriptorSetUniformBuffersMemory[imageIndex],
         0,
-        sizeof(meshUniformData));
+        sizeof(blockAUniformData));
 
-    MeshUniformBuffer meshBUniformData;
-    glm_mat4_identity(meshBUniformData.model);
-    //glm_rotate(meshBUniformData.model, (float)glfwGetTime() * 0.4f, (vec3) { 0.0f, 0.0f, 1.0f });
+    BlockDescriptorUniformBuffer blockBUniformData;
+    glm_mat4_identity(blockBUniformData.model);
+    //glm_rotate(blockBUniformData.model, (float)glfwGetTime() * 0.8f, (vec3) { 0.0f, 0.0f, 1.0f });
+    //glm_translate(blockBUniformData.model, (vec3) { 0.0f, 0.0f, 3.0f });
     copyDataToBuffer(
         r->device,
-        &meshBUniformData,
-        r->meshBUniformBuffersMemory[imageIndex],
+        &blockBUniformData,
+        r->blockB.descriptorSetUniformBuffersMemory[imageIndex],
         0,
-        sizeof(meshUniformData));
+        sizeof(blockBUniformData));
 
     VkSubmitInfo submitInfo;
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -371,28 +328,30 @@ void cleanupRenderer(Renderer r)
     }
 
     vkDestroyDescriptorPool(r.device, r.globalDescriptorPool, NULL);
-    vkDestroyDescriptorPool(r.device, r.meshDescriptorPool, NULL);
     free(r.globalDescriptorSets);
-    free(r.meshDescriptorSets);
-    free(r.meshBDescriptorSets);
-    vkDestroyDescriptorSetLayout(r.device, r.globalDescriptorSetLayout, NULL);
-    vkDestroyDescriptorSetLayout(r.device, r.meshDescriptorSetLayout, NULL);
     for (int i = 0; i < r.swapchain.imageCount; i++) {
         vkDestroyBuffer(r.device, r.globalUniformBuffers[i], NULL);
         vkFreeMemory(r.device, r.globalUniformBuffersMemory[i], NULL);
-
-        vkDestroyBuffer(r.device, r.meshUniformBuffers[i], NULL);
-        vkFreeMemory(r.device, r.meshUniformBuffersMemory[i], NULL);
-
-        vkDestroyBuffer(r.device, r.meshBUniformBuffers[i], NULL);
-        vkFreeMemory(r.device, r.meshBUniformBuffersMemory[i], NULL);
     }
     free(r.globalUniformBuffers);
     free(r.globalUniformBuffersMemory);
-    free(r.meshUniformBuffers);
-    free(r.meshUniformBuffersMemory);
-    free(r.meshBUniformBuffers);
-    free(r.meshBUniformBuffersMemory);
+
+    cleanupBlock(
+        r.device,
+        r.blockA,
+        r.swapchain.imageCount,
+        r.blockDescriptorPool);
+
+    cleanupBlock(
+        r.device,
+        r.blockB,
+        r.swapchain.imageCount,
+        r.blockDescriptorPool);
+
+    vkDestroyDescriptorPool(r.device, r.blockDescriptorPool, NULL);
+
+    vkDestroyDescriptorSetLayout(r.device, r.globalDescriptorSetLayout, NULL);
+    vkDestroyDescriptorSetLayout(r.device, r.blockDescriptorSetLayout, NULL);
 
     vkDestroyCommandPool(r.device, r.graphicsCommandPool, NULL);
     vkDestroyCommandPool(r.device, r.transientGraphicsCommandPool, NULL);
@@ -407,18 +366,6 @@ void cleanupRenderer(Renderer r)
     vkDestroyImage(r.device, r.depthImage, NULL);
     vkFreeMemory(r.device, r.depthImageMemory, NULL);
     vkDestroyImageView(r.device, r.depthImageView, NULL);
-
-    vkDestroyBuffer(r.device, r.indexBuffer, NULL);
-    vkFreeMemory(r.device, r.indexBufferMemory, NULL);
-
-    vkDestroyBuffer(r.device, r.vertexBuffer, NULL);
-    vkFreeMemory(r.device, r.vertexBufferMemory, NULL);
-
-    vkDestroyBuffer(r.device, r.indexBufferB, NULL);
-    vkFreeMemory(r.device, r.indexBufferMemoryB, NULL);
-
-    vkDestroyBuffer(r.device, r.vertexBufferB, NULL);
-    vkFreeMemory(r.device, r.vertexBufferMemoryB, NULL);
 
     vkDestroyDevice(r.device, NULL);
     vkDestroySurfaceKHR(r.instance, r.surface, NULL);

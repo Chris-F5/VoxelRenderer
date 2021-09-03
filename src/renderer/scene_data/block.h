@@ -1,8 +1,8 @@
 #ifndef BLOCK
 #define BLOCK
 
-#include <vulkan/vulkan.h>
 #include <cglm/types.h>
+#include <vulkan/vulkan.h>
 
 extern const VkVertexInputBindingDescription VERTEX_BINDING_DESCRIPTIONS[];
 extern const size_t VERTEX_BINDING_DESCRIPTION_COUNT;
@@ -21,19 +21,42 @@ typedef struct {
 typedef struct
 {
     vec3 color;
-}Voxel;
+} Voxel;
 
-void createBlockVertices(
+typedef struct {
+    mat4 model;
+} BlockDescriptorUniformBuffer;
+
+typedef struct
+{
+    Voxel* voxels;
+    VkDescriptorSet* descriptorSets;
+    VkBuffer* descriptorSetUniformBuffers;
+    VkDeviceMemory* descriptorSetUniformBuffersMemory;
+    uint32_t vertexBufferLength;
+    VkBuffer vertexBuffer;
+    VkDeviceMemory vertexBufferMemory;
+} Block;
+
+VkDescriptorSetLayout createBlockDescriptorSetLayout(VkDevice device);
+
+VkDescriptorPool createBlockDescriptorPool(
+    VkDevice device,
+    uint32_t swapchainImageCount,
+    uint32_t maxBlockCount);
+
+Block createBlock(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
-    VkQueue queue,
-    VkCommandPool commandPool,
-    const Voxel* block,
-    uint32_t* vertexCount,
-    VkBuffer* vertexBuffer,
-    VkDeviceMemory* vertexBufferMemory,
-    uint32_t* indexCount,
-    VkBuffer* indexBuffer,
-    VkDeviceMemory* indexBufferMemory);
+    VkDescriptorSetLayout blockDescriptorSetLayout,
+    VkDescriptorPool descriptorPool,
+    uint32_t swapchainImageCount,
+    Voxel* voxels);
+
+void cleanupBlock(
+    VkDevice device,
+    Block block,
+    uint32_t swapchainImageCount,
+    VkDescriptorPool blockDescriptorPool);
 
 #endif

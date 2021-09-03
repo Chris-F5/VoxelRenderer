@@ -17,9 +17,8 @@ VkCommandBuffer* createRenderCommandBuffers(
     const VkDescriptorSet* globalDescriptorSets,
     uint32_t modelCount,
     VkDescriptorSet** meshDescriptorSets,
-    const uint32_t* indexCounts,
+    const uint32_t* vertexCounts,
     const VkBuffer* vertexBuffers,
-    const VkBuffer* indexBuffers,
     VkCommandBuffer* commandBuffers)
 {
     allocateCommandBuffers(device, commandPool, count, commandBuffers);
@@ -82,9 +81,7 @@ VkCommandBuffer* createRenderCommandBuffers(
 
             vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffers[m], vertexBufferOffsets);
 
-            vkCmdBindIndexBuffer(commandBuffers[i], indexBuffers[m], 0, VK_INDEX_TYPE_UINT32);
-
-            vkCmdDrawIndexed(commandBuffers[i], indexCounts[m], 1, 0, 0, 0);
+            vkCmdDraw(commandBuffers[i], vertexCounts[m], 1, 0, 0);
         }
 
         vkCmdEndRenderPass(commandBuffers[i]);
