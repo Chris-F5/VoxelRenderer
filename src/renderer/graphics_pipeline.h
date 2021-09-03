@@ -18,7 +18,8 @@ GraphicsPipeline createGraphicsPipeline(
     Swapchain swapchain,
     VkShaderModule vertShader,
     VkShaderModule fragShader,
-    VkDescriptorSetLayout descriptorSetLayout);
+    uint32_t descriptorSetLayoutCount,
+    VkDescriptorSetLayout* descriptorSetLayouts);
 
 void cleanupGraphicsPipeline(VkDevice device, GraphicsPipeline pipeline);
 

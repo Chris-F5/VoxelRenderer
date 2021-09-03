@@ -116,31 +116,69 @@ Renderer createRenderer(GLFWwindow* window)
         &r.indexBufferB,
         &r.indexBufferMemoryB);
 
-    r.descriptorSets = malloc(r.swapchain.imageCount * sizeof(VkDescriptorSet));
-    r.uniformBuffers = malloc(r.swapchain.imageCount * sizeof(VkBuffer));
-    r.uniformBuffersMemory = malloc(r.swapchain.imageCount * sizeof(VkDeviceMemory));
-    createDescriptorSets(
+    createDescriptorSetLayouts(
+        r.device,
+        &r.globalDescriptorSetLayout,
+        &r.meshDescriptorSetLayout);
+
+    r.globalDescriptorSets = malloc(r.swapchain.imageCount * sizeof(VkDescriptorSet));
+    r.globalUniformBuffers = malloc(r.swapchain.imageCount * sizeof(VkBuffer));
+    r.globalUniformBuffersMemory = malloc(r.swapchain.imageCount * sizeof(VkDeviceMemory));
+    createGlobalDescriptorSets(
         r.device,
         r.physicalDevice,
+        r.globalDescriptorSetLayout,
         r.swapchain.imageCount,
-        &r.descriptorPool,
-        &r.descriptorSetLayout,
-        r.descriptorSets,
-        r.uniformBuffers,
-        r.uniformBuffersMemory);
+        &r.globalDescriptorPool,
+        r.globalDescriptorSets,
+        r.globalUniformBuffers,
+        r.globalUniformBuffersMemory);
+
+    createMeshDescriptorPool(
+        r.device,
+        2 * r.swapchain.imageCount,
+        &r.meshDescriptorPool);
+
+    r.meshDescriptorSets = malloc(r.swapchain.imageCount * sizeof(VkDescriptorSet));
+    r.meshUniformBuffers = malloc(r.swapchain.imageCount * sizeof(VkBuffer));
+    r.meshUniformBuffersMemory = malloc(r.swapchain.imageCount * sizeof(VkDeviceMemory));
+    createMeshDescriptorSets(
+        r.device,
+        r.physicalDevice,
+        r.meshDescriptorSetLayout,
+        r.swapchain.imageCount,
+        r.meshDescriptorPool,
+        r.meshDescriptorSets,
+        r.meshUniformBuffers,
+        r.meshUniformBuffersMemory);
+
+    r.meshBDescriptorSets = malloc(r.swapchain.imageCount * sizeof(VkDescriptorSet));
+    r.meshBUniformBuffers = malloc(r.swapchain.imageCount * sizeof(VkBuffer));
+    r.meshBUniformBuffersMemory = malloc(r.swapchain.imageCount * sizeof(VkDeviceMemory));
+    createMeshDescriptorSets(
+        r.device,
+        r.physicalDevice,
+        r.meshDescriptorSetLayout,
+        r.swapchain.imageCount,
+        r.meshDescriptorPool,
+        r.meshBDescriptorSets,
+        r.meshBUniformBuffers,
+        r.meshBUniformBuffersMemory);
 
     // GRAPHICS PIPELINE
 
     VkShaderModule vertShader = createShaderModule(r.device, "shader.vert.spv");
     VkShaderModule fragShader = createShaderModule(r.device, "shader.frag.spv");
 
+    VkDescriptorSetLayout descriptorSetLayouts[] = { r.globalDescriptorSetLayout, r.meshDescriptorSetLayout };
     r.graphicsPipeline = createGraphicsPipeline(
         r.device,
         r.physicalDeviceProperties,
         r.swapchain,
         vertShader,
         fragShader,
-        r.descriptorSetLayout);
+        2,
+        descriptorSetLayouts);
 
     vkDestroyShaderModule(r.device, vertShader, NULL);
     vkDestroyShaderModule(r.device, fragShader, NULL);
@@ -169,9 +207,10 @@ Renderer createRenderer(GLFWwindow* window)
 
     // COMMAND BUFFERS
 
-    VkBuffer vertexBuffers[] = {r.vertexBuffer, r.vertexBufferB};
-    uint32_t indexCounts[] = {indexCount, indexCountB};
-    VkBuffer indexBuffers[] = {r.indexBuffer, r.indexBufferB};
+    VkBuffer vertexBuffers[] = { r.vertexBuffer, r.vertexBufferB };
+    uint32_t indexCounts[] = { indexCount, indexCountB };
+    VkBuffer indexBuffers[] = { r.indexBuffer, r.indexBufferB };
+    VkDescriptorSet* meshDescriptorSets[] = { r.meshDescriptorSets, r.meshBDescriptorSets };
 
     r.commandBuffers = (VkCommandBuffer*)malloc(r.swapchain.imageCount * sizeof(VkCommandBuffer));
     createRenderCommandBuffers(
@@ -183,8 +222,9 @@ Renderer createRenderer(GLFWwindow* window)
         r.graphicsPipeline.pipeline,
         r.graphicsPipeline.pipelineLayout,
         r.framebuffers,
-        r.descriptorSets,
+        r.globalDescriptorSets,
         sizeof(vertexBuffers) / sizeof(vertexBuffers[0]),
+        meshDescriptorSets,
         indexCounts,
         vertexBuffers,
         indexBuffers,
@@ -251,14 +291,38 @@ void drawFrame(Renderer* r)
         }
     r->swapchainImagesInFlight[imageIndex] = r->currentFrame;
 
-    // TODO: rotate r->uniformData
+    // TODO: rotate r->globalUniformData
 
-    UniformBuffer uniformData;
-    glm_mat4_identity(uniformData.model);
-    //glm_rotate(uniformData.model, (float)glfwGetTime() * 0.4f, (vec3) { 0.0f, 0.0f, 1.0f });
-    createViewMat(r->camera, uniformData.view);
-    createProjMat(r->camera, uniformData.proj);
-    copyDataToBuffer(r->device, &uniformData, r->uniformBuffersMemory[imageIndex], 0, sizeof(UniformBuffer));
+    GlobalUniformBuffer globalUniformData;
+    createViewMat(r->camera, globalUniformData.view);
+    createProjMat(r->camera, globalUniformData.proj);
+    copyDataToBuffer(
+        r->device,
+        &globalUniformData,
+        r->globalUniformBuffersMemory[imageIndex],
+        0,
+        sizeof(GlobalUniformBuffer));
+
+    MeshUniformBuffer meshUniformData;
+    glm_mat4_identity(meshUniformData.model);
+    glm_rotate(meshUniformData.model, (float)glfwGetTime() * 0.8f, (vec3) { 0.0f, 0.0f, 1.0f });
+    glm_translate(meshUniformData.model, (vec3) { 0.0f, 0.0f, 3.0f });
+    copyDataToBuffer(
+        r->device,
+        &meshUniformData,
+        r->meshUniformBuffersMemory[imageIndex],
+        0,
+        sizeof(meshUniformData));
+
+    MeshUniformBuffer meshBUniformData;
+    glm_mat4_identity(meshBUniformData.model);
+    //glm_rotate(meshBUniformData.model, (float)glfwGetTime() * 0.4f, (vec3) { 0.0f, 0.0f, 1.0f });
+    copyDataToBuffer(
+        r->device,
+        &meshBUniformData,
+        r->meshBUniformBuffersMemory[imageIndex],
+        0,
+        sizeof(meshUniformData));
 
     VkSubmitInfo submitInfo;
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -306,15 +370,29 @@ void cleanupRenderer(Renderer r)
         vkDestroyFence(r.device, r.renderFinishedFences[i], NULL);
     }
 
-    vkDestroyDescriptorPool(r.device, r.descriptorPool, NULL);
-    free(r.descriptorSets);
-    vkDestroyDescriptorSetLayout(r.device, r.descriptorSetLayout, NULL);
+    vkDestroyDescriptorPool(r.device, r.globalDescriptorPool, NULL);
+    vkDestroyDescriptorPool(r.device, r.meshDescriptorPool, NULL);
+    free(r.globalDescriptorSets);
+    free(r.meshDescriptorSets);
+    free(r.meshBDescriptorSets);
+    vkDestroyDescriptorSetLayout(r.device, r.globalDescriptorSetLayout, NULL);
+    vkDestroyDescriptorSetLayout(r.device, r.meshDescriptorSetLayout, NULL);
     for (int i = 0; i < r.swapchain.imageCount; i++) {
-        vkDestroyBuffer(r.device, r.uniformBuffers[i], NULL);
-        vkFreeMemory(r.device, r.uniformBuffersMemory[i], NULL);
+        vkDestroyBuffer(r.device, r.globalUniformBuffers[i], NULL);
+        vkFreeMemory(r.device, r.globalUniformBuffersMemory[i], NULL);
+
+        vkDestroyBuffer(r.device, r.meshUniformBuffers[i], NULL);
+        vkFreeMemory(r.device, r.meshUniformBuffersMemory[i], NULL);
+
+        vkDestroyBuffer(r.device, r.meshBUniformBuffers[i], NULL);
+        vkFreeMemory(r.device, r.meshBUniformBuffersMemory[i], NULL);
     }
-    free(r.uniformBuffers);
-    free(r.uniformBuffersMemory);
+    free(r.globalUniformBuffers);
+    free(r.globalUniformBuffersMemory);
+    free(r.meshUniformBuffers);
+    free(r.meshUniformBuffersMemory);
+    free(r.meshBUniformBuffers);
+    free(r.meshBUniformBuffersMemory);
 
     vkDestroyCommandPool(r.device, r.graphicsCommandPool, NULL);
     vkDestroyCommandPool(r.device, r.transientGraphicsCommandPool, NULL);

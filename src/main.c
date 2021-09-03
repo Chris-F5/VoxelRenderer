@@ -30,7 +30,7 @@ int main(int argc, char** argv)
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan App", NULL, NULL);
 
     Renderer renderer = createRenderer(window);
-    glm_vec3_copy((vec3){0.0f, 0.0f, 2.0f}, renderer.camera.pos);
+    glm_vec3_copy((vec3){0.0f, 2.0f, 10.0f}, renderer.camera.pos);
     renderer.camera.yaw = 180;
 
     while (!glfwWindowShouldClose(window)) {

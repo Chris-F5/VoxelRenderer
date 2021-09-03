@@ -20,6 +20,7 @@
 
 typedef struct
 {
+    // DEVICE
     VkInstance instance;
     bool validationLayersEnabled;
     VkSurfaceKHR surface;
@@ -29,10 +30,11 @@ typedef struct
     VkQueue graphicsQueue;
     VkQueue presentQueue;
     Swapchain swapchain;
+
+    // MEMORY
     VkImage depthImage;
     VkDeviceMemory depthImageMemory;
     VkImageView depthImageView;
-    GraphicsPipeline graphicsPipeline;
     VkFramebuffer* framebuffers;
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
@@ -42,19 +44,31 @@ typedef struct
     VkDeviceMemory vertexBufferMemoryB;
     VkBuffer indexBufferB;
     VkDeviceMemory indexBufferMemoryB;
-    VkDescriptorPool descriptorPool;
-    VkDescriptorSetLayout descriptorSetLayout;
-    VkDescriptorSet* descriptorSets;
-    VkBuffer* uniformBuffers;
-    VkDeviceMemory* uniformBuffersMemory;
+    VkDescriptorSetLayout globalDescriptorSetLayout;
+    VkDescriptorSetLayout meshDescriptorSetLayout;
+    VkDescriptorPool globalDescriptorPool;
+    VkDescriptorPool meshDescriptorPool;
+    VkDescriptorSet* globalDescriptorSets;
+    VkBuffer* globalUniformBuffers;
+    VkDeviceMemory* globalUniformBuffersMemory;
+    VkDescriptorSet* meshDescriptorSets;
+    VkBuffer* meshUniformBuffers;
+    VkDeviceMemory* meshUniformBuffersMemory;
+    VkDescriptorSet* meshBDescriptorSets;
+    VkBuffer* meshBUniformBuffers;
+    VkDeviceMemory* meshBUniformBuffersMemory;
+
+    // PIPELINE
     VkCommandPool graphicsCommandPool;
     VkCommandPool transientGraphicsCommandPool;
     VkCommandBuffer* commandBuffers;
+    GraphicsPipeline graphicsPipeline;
     VkSemaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT];
     VkSemaphore renderFinishedSemaphores[MAX_FRAMES_IN_FLIGHT];
     VkFence renderFinishedFences[MAX_FRAMES_IN_FLIGHT];
     int* swapchainImagesInFlight;
     int currentFrame;
+
     Camera camera;
 } Renderer;
 

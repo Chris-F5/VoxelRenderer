@@ -14,8 +14,9 @@ VkCommandBuffer* createRenderCommandBuffers(
     VkPipeline graphicsPipeline,
     VkPipelineLayout graphicsPipelineLayout,
     const VkFramebuffer* framebuffers,
-    const VkDescriptorSet* descriptorSets,
+    const VkDescriptorSet* globalDescriptorSets,
     uint32_t modelCount,
+    VkDescriptorSet** meshDescriptorSets,
     const uint32_t* indexCounts,
     const VkBuffer* vertexBuffers,
     const VkBuffer* indexBuffers,
@@ -64,11 +65,21 @@ VkCommandBuffer* createRenderCommandBuffers(
             graphicsPipelineLayout,
             0,
             1,
-            &descriptorSets[i],
+            &globalDescriptorSets[i],
             0,
             NULL);
 
         for (int m = 0; m < modelCount; m++) {
+            vkCmdBindDescriptorSets(
+                commandBuffers[i],
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                graphicsPipelineLayout,
+                1,
+                1,
+                &meshDescriptorSets[m][i],
+                0,
+                NULL);
+
             vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffers[m], vertexBufferOffsets);
 
             vkCmdBindIndexBuffer(commandBuffers[i], indexBuffers[m], 0, VK_INDEX_TYPE_UINT32);

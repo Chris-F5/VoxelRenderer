@@ -1,5 +1,4 @@
 #include "graphics_pipeline.h"
-
 #include <string.h>
 
 #include "device.h"
@@ -29,7 +28,8 @@ GraphicsPipeline createGraphicsPipeline(
     Swapchain swapchain,
     VkShaderModule vertShader,
     VkShaderModule fragShader,
-    VkDescriptorSetLayout descriptorSetLayout)
+    uint32_t descriptorSetLayoutCount,
+    VkDescriptorSetLayout* descriptorSetLayouts)
 {
     GraphicsPipeline pipeline;
 
@@ -159,8 +159,8 @@ GraphicsPipeline createGraphicsPipeline(
     pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutCreateInfo.pNext = NULL;
     pipelineLayoutCreateInfo.flags = 0;
-    pipelineLayoutCreateInfo.setLayoutCount = 1;
-    pipelineLayoutCreateInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutCreateInfo.setLayoutCount = descriptorSetLayoutCount;
+    pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts;
     pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pipelineLayoutCreateInfo.pPushConstantRanges = NULL;
 
