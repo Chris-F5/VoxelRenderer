@@ -30,6 +30,7 @@ typedef struct {
 typedef struct
 {
     Voxel* voxels;
+    BlockDescriptorUniformBuffer descriptorData;
     VkDescriptorSet* descriptorSets;
     VkBuffer* descriptorSetUniformBuffers;
     VkDeviceMemory* descriptorSetUniformBuffersMemory;
@@ -52,6 +53,8 @@ Block createBlock(
     VkDescriptorPool descriptorPool,
     uint32_t swapchainImageCount,
     Voxel* voxels);
+
+void updateBlockDescriptors(VkDevice device, Block* block, uint32_t currentSwapchainImageIndex);
 
 void cleanupBlock(
     VkDevice device,

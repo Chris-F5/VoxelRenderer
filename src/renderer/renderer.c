@@ -259,27 +259,13 @@ void drawFrame(Renderer* r)
         0,
         sizeof(GlobalUniformBuffer));
 
-    BlockDescriptorUniformBuffer blockAUniformData;
-    glm_mat4_identity(blockAUniformData.model);
-    glm_rotate(blockAUniformData.model, (float)glfwGetTime() * 0.8f, (vec3) { 0.0f, 0.0f, 1.0f });
-    glm_translate(blockAUniformData.model, (vec3) { 0.0f, 0.0f, 3.0f });
-    copyDataToBuffer(
-        r->device,
-        &blockAUniformData,
-        r->blockA.descriptorSetUniformBuffersMemory[imageIndex],
-        0,
-        sizeof(blockAUniformData));
+    glm_mat4_identity(r->blockA.descriptorData.model);
+    glm_rotate(r->blockA.descriptorData.model, (float)glfwGetTime() * 0.8f, (vec3) { 0.0f, 0.0f, 1.0f });
+    glm_translate(r->blockA.descriptorData.model, (vec3) { 0.0f, 0.0f, 3.0f });
+    updateBlockDescriptors(r->device, &r->blockA, imageIndex);
 
-    BlockDescriptorUniformBuffer blockBUniformData;
-    glm_mat4_identity(blockBUniformData.model);
-    //glm_rotate(blockBUniformData.model, (float)glfwGetTime() * 0.8f, (vec3) { 0.0f, 0.0f, 1.0f });
-    //glm_translate(blockBUniformData.model, (vec3) { 0.0f, 0.0f, 3.0f });
-    copyDataToBuffer(
-        r->device,
-        &blockBUniformData,
-        r->blockB.descriptorSetUniformBuffersMemory[imageIndex],
-        0,
-        sizeof(blockBUniformData));
+    glm_mat4_identity(r->blockB.descriptorData.model);
+    updateBlockDescriptors(r->device, &r->blockB, imageIndex);
 
     VkSubmitInfo submitInfo;
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

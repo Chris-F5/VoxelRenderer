@@ -226,6 +226,8 @@ Block createBlock(
     block.voxels = (Voxel*)malloc(VOX_BLOCK_VOX_COUNT * sizeof(Voxel));
     memcpy(block.voxels, voxels, VOX_BLOCK_VOX_COUNT * sizeof(Voxel));
 
+    glm_mat4_identity(block.descriptorData.model);
+
     // ALLOCATE DESCRIPTOR SETS
 
     block.descriptorSets = (VkDescriptorSet*)malloc(swapchainImageCount * sizeof(VkDescriptorSet));
@@ -297,6 +299,16 @@ Block createBlock(
         block.vertexBufferLength * sizeof(Vertex));
 
     return block;
+}
+
+void updateBlockDescriptors(VkDevice device, Block* block, uint32_t currentSwapchainImageIndex)
+{
+    copyDataToBuffer(
+        device,
+        &block->descriptorData,
+        block->descriptorSetUniformBuffersMemory[currentSwapchainImageIndex],
+        0,
+        sizeof(BlockDescriptorUniformBuffer));
 }
 
 void cleanupBlock(
