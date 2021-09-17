@@ -1,6 +1,8 @@
 #ifndef BLOCK
 #define BLOCK
 
+#include <stdio.h>
+
 #include <cglm/types.h>
 #include <vulkan/vulkan.h>
 
@@ -20,7 +22,7 @@ typedef struct {
 
 typedef struct
 {
-    vec3 color;
+    char colorId;
 } Voxel;
 
 typedef struct {
@@ -52,7 +54,7 @@ Block createBlock(
     VkDescriptorSetLayout blockDescriptorSetLayout,
     VkDescriptorPool descriptorPool,
     uint32_t swapchainImageCount,
-    Voxel* voxels);
+    FILE* blockFile);
 
 void updateBlockDescriptors(VkDevice device, Block* block, uint32_t currentSwapchainImageIndex);
 

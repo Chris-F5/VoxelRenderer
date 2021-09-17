@@ -1,6 +1,7 @@
 #include "buffer.h"
 
 #include <string.h>
+#include <stdio.h>
 
 #include "exceptions.h"
 #include "physical_device_memory.h"

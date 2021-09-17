@@ -79,14 +79,10 @@ Renderer createRenderer(GLFWwindow* window)
     r.blockDescriptorPool = createBlockDescriptorPool(r.device, r.swapchain.imageCount, 2);
 
     {
-        Voxel* blockVoxels = (Voxel*)malloc(VOX_BLOCK_VOX_COUNT * sizeof(Voxel));
-        memset(blockVoxels, 0, VOX_BLOCK_VOX_COUNT * sizeof(Voxel));
+        FILE* blockFile;
 
-        blockVoxels[0].color[0] = 1.0f;
-        blockVoxels[1].color[1] = 1.0f;
-        blockVoxels[2].color[2] = 1.0f;
-        blockVoxels[26].color[0] = 0.5f;
-        blockVoxels[26].color[1] = 0.5f;
+        // Block A
+        blockFile = fopen("a.block", "rb");
 
         r.blockA = createBlock(
             r.device,
@@ -94,12 +90,13 @@ Renderer createRenderer(GLFWwindow* window)
             r.blockDescriptorSetLayout,
             r.blockDescriptorPool,
             r.swapchain.imageCount,
-            blockVoxels);
+            blockFile);
 
-        memset(blockVoxels, 0, VOX_BLOCK_VOX_COUNT * sizeof(Voxel));
+        fclose(blockFile);
 
-        blockVoxels[24].color[1] = 0.5f;
-        blockVoxels[24].color[2] = 0.5f;
+        // Block B
+
+        blockFile = fopen("b.block", "rb");
 
         r.blockB = createBlock(
             r.device,
@@ -107,11 +104,10 @@ Renderer createRenderer(GLFWwindow* window)
             r.blockDescriptorSetLayout,
             r.blockDescriptorPool,
             r.swapchain.imageCount,
-            blockVoxels);
+            blockFile);
 
-        free(blockVoxels);
+        fclose(blockFile);
     }
-
     r.globalDescriptorSets = malloc(r.swapchain.imageCount * sizeof(VkDescriptorSet));
     r.globalUniformBuffers = malloc(r.swapchain.imageCount * sizeof(VkBuffer));
     r.globalUniformBuffersMemory = malloc(r.swapchain.imageCount * sizeof(VkDeviceMemory));

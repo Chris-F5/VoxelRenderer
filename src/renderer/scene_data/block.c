@@ -11,12 +11,6 @@
 
 typedef uint32_t VertexIndex;
 
-const VertexIndex INDEX_BUFFER[] = {
-    0, 1, 2,
-    1, 3, 2,
-    4, 1, 0,
-    4, 5, 1
-};
 const VkVertexInputBindingDescription VERTEX_BINDING_DESCRIPTIONS[] = {
     { 0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX }
 };
@@ -28,8 +22,19 @@ const VkVertexInputAttributeDescription VERTEX_INPUT_ATTRIBUTE_DESCRIPTIONS[] = 
 };
 const size_t VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_COUNT = sizeof(VERTEX_INPUT_ATTRIBUTE_DESCRIPTIONS) / sizeof(VERTEX_INPUT_ATTRIBUTE_DESCRIPTIONS[0]);
 
-const uint32_t VOX_BLOCK_SCALE = 3;
+const uint32_t VOX_BLOCK_SCALE = 2;
 const uint32_t VOX_BLOCK_VOX_COUNT = VOX_BLOCK_SCALE * VOX_BLOCK_SCALE * VOX_BLOCK_SCALE;
+
+const vec3 VOXEL_PALETTE[] = {
+    { 0.0, 0.0, 0.0 },
+    { 1.0, 0.0, 0.0 },
+    { 0.0, 1.0, 0.0 },
+    { 0.0, 0.0, 1.0 },
+    { 1.0, 1.0, 0.0 },
+    { 1.0, 0.0, 1.0 },
+    { 0.0, 1.0, 1.0 },
+    { 1.0, 1.0, 1.0 },
+};
 
 const vec3 FACE_POINTS_XP[] = {
     { 1, 0, 0 },
@@ -131,7 +136,7 @@ bool isVoxelPresent(
         return false;
 
     uint32_t i = x + y * VOX_BLOCK_SCALE + z * VOX_BLOCK_SCALE * VOX_BLOCK_SCALE;
-    return voxels[i].color[0] != 0 || voxels[i].color[1] != 0 || voxels[i].color[2] != 0;
+    return voxels[i].colorId != 0;
 }
 
 void createBlockVertices(
@@ -139,29 +144,34 @@ void createBlockVertices(
     uint32_t* vertexCount,
     Vertex** vertices)
 {
-    const uint32_t maxVertexCount = VOX_BLOCK_VOX_COUNT * 8;
+    const uint32_t maxVertexCount = VOX_BLOCK_VOX_COUNT * 18;
     *vertices = (Vertex*)malloc(maxVertexCount * sizeof(Vertex));
 
     *vertexCount = 0;
 
     for (int i = 0; i < VOX_BLOCK_VOX_COUNT; i++)
-        if (voxels[i].color[0] != 0 || voxels[i].color[1] != 0 || voxels[i].color[2] != 0) {
+        if (voxels[i].colorId != 0) {
+            vec3 color;
+            color[0] = VOXEL_PALETTE[voxels[i].colorId][0];
+            color[1] = VOXEL_PALETTE[voxels[i].colorId][1];
+            color[2] = VOXEL_PALETTE[voxels[i].colorId][2];
+
             int x = i % VOX_BLOCK_SCALE;
             int y = i / VOX_BLOCK_SCALE % VOX_BLOCK_SCALE;
             int z = i / (VOX_BLOCK_SCALE * VOX_BLOCK_SCALE);
 
             if (!isVoxelPresent(x + 1, y + 0, z + 0, voxels))
-                addFace(x, y, z, FACE_POINTS_XP, voxels[i].color, vertexCount, *vertices);
+                addFace(x, y, z, FACE_POINTS_XP, color, vertexCount, *vertices);
             if (!isVoxelPresent(x - 1, y + 0, z + 0, voxels))
-                addFace(x, y, z, FACE_POINTS_XN, voxels[i].color, vertexCount, *vertices);
+                addFace(x, y, z, FACE_POINTS_XN, color, vertexCount, *vertices);
             if (!isVoxelPresent(x + 0, y + 1, z + 0, voxels))
-                addFace(x, y, z, FACE_POINTS_YP, voxels[i].color, vertexCount, *vertices);
+                addFace(x, y, z, FACE_POINTS_YP, color, vertexCount, *vertices);
             if (!isVoxelPresent(x + 0, y - 1, z + 0, voxels))
-                addFace(x, y, z, FACE_POINTS_YN, voxels[i].color, vertexCount, *vertices);
+                addFace(x, y, z, FACE_POINTS_YN, color, vertexCount, *vertices);
             if (!isVoxelPresent(x + 0, y + 0, z + 1, voxels))
-                addFace(x, y, z, FACE_POINTS_ZP, voxels[i].color, vertexCount, *vertices);
+                addFace(x, y, z, FACE_POINTS_ZP, color, vertexCount, *vertices);
             if (!isVoxelPresent(x + 0, y + 0, z - 1, voxels))
-                addFace(x, y, z, FACE_POINTS_ZN, voxels[i].color, vertexCount, *vertices);
+                addFace(x, y, z, FACE_POINTS_ZN, color, vertexCount, *vertices);
         }
 }
 
@@ -220,12 +230,12 @@ Block createBlock(
     VkDescriptorSetLayout blockDescriptorSetLayout,
     VkDescriptorPool descriptorPool,
     uint32_t swapchainImageCount,
-    Voxel* voxels)
+    FILE* blockFile)
 {
     Block block;
     block.voxels = (Voxel*)malloc(VOX_BLOCK_VOX_COUNT * sizeof(Voxel));
-    memcpy(block.voxels, voxels, VOX_BLOCK_VOX_COUNT * sizeof(Voxel));
-
+    //memcpy(block.voxels, voxels, VOX_BLOCK_VOX_COUNT * sizeof(Voxel));
+    fread(block.voxels, sizeof(Voxel), VOX_BLOCK_VOX_COUNT, blockFile);
     glm_mat4_identity(block.descriptorData.model);
 
     // ALLOCATE DESCRIPTOR SETS
