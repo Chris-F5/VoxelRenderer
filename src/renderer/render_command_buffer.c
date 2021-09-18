@@ -16,21 +16,21 @@ VkCommandBuffer* createRenderCommandBuffers(
     const VkFramebuffer* framebuffers,
     const VkDescriptorSet* globalDescriptorSets,
     uint32_t modelCount,
-    VkDescriptorSet** meshDescriptorSets,
+    VkDescriptorSet* meshDescriptorSets,
     const uint32_t* vertexCounts,
     const VkBuffer* vertexBuffers,
     VkCommandBuffer* commandBuffers)
 {
     allocateCommandBuffers(device, commandPool, count, commandBuffers);
 
-    for (int i = 0; i < count; i++) {
+    for (int s = 0; s < count; s++) {
         VkCommandBufferBeginInfo beginInfo;
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.pNext = NULL;
         beginInfo.flags = 0;
         beginInfo.pInheritanceInfo = NULL;
         handleVkResult(
-            vkBeginCommandBuffer(commandBuffers[i], &beginInfo),
+            vkBeginCommandBuffer(commandBuffers[s], &beginInfo),
             "begin recording render command buffers");
 
         VkClearValue clearValues[2];
@@ -46,48 +46,48 @@ VkCommandBuffer* createRenderCommandBuffers(
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.pNext = NULL;
         renderPassInfo.renderPass = renderPass;
-        renderPassInfo.framebuffer = framebuffers[i];
+        renderPassInfo.framebuffer = framebuffers[s];
         renderPassInfo.renderArea.offset = (VkOffset2D) { 0, 0 };
         renderPassInfo.renderArea.extent = extent;
         renderPassInfo.clearValueCount = sizeof(clearValues) / sizeof(clearValues[0]);
         renderPassInfo.pClearValues = clearValues;
 
-        vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(commandBuffers[s], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+        vkCmdBindPipeline(commandBuffers[s], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
         VkDeviceSize vertexBufferOffsets[] = { 0 };
 
         vkCmdBindDescriptorSets(
-            commandBuffers[i],
+            commandBuffers[s],
             VK_PIPELINE_BIND_POINT_GRAPHICS,
             graphicsPipelineLayout,
             0,
             1,
-            &globalDescriptorSets[i],
+            &globalDescriptorSets[s],
             0,
             NULL);
 
         for (int m = 0; m < modelCount; m++) {
             vkCmdBindDescriptorSets(
-                commandBuffers[i],
+                commandBuffers[s],
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                 graphicsPipelineLayout,
                 1,
                 1,
-                &meshDescriptorSets[m][i],
+                &meshDescriptorSets[m],
                 0,
                 NULL);
 
-            vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertexBuffers[m], vertexBufferOffsets);
+            vkCmdBindVertexBuffers(commandBuffers[s], 0, 1, &vertexBuffers[m], vertexBufferOffsets);
 
-            vkCmdDraw(commandBuffers[i], vertexCounts[m], 1, 0, 0);
+            vkCmdDraw(commandBuffers[s], vertexCounts[m], 1, 0, 0);
         }
 
-        vkCmdEndRenderPass(commandBuffers[i]);
+        vkCmdEndRenderPass(commandBuffers[s]);
 
         handleVkResult(
-            vkEndCommandBuffer(commandBuffers[i]),
+            vkEndCommandBuffer(commandBuffers[s]),
             "recording render command buffer");
     }
 

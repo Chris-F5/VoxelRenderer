@@ -29,23 +29,3 @@ void allocateDescriptorSets(
 
     free(setLayoutCopies);
 }
-
-void createUniformBuffers(
-    VkDevice device,
-    VkPhysicalDevice physicalDevice,
-    size_t uniformBufferSize,
-    uint32_t count,
-    VkBuffer* buffers,
-    VkDeviceMemory* buffersMemory)
-{
-    for (int i = 0; i < count; i++)
-        createBuffer(
-            device,
-            physicalDevice,
-            uniformBufferSize,
-            0,
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-            &buffers[i],
-            &buffersMemory[i]);
-}

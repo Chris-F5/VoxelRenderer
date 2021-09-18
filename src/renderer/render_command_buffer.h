@@ -14,7 +14,7 @@ VkCommandBuffer* createRenderCommandBuffers(
     const VkFramebuffer* framebuffers,
     const VkDescriptorSet* globalDescriptorSets,
     uint32_t modelCount,
-    VkDescriptorSet** meshDescriptorSets,
+    VkDescriptorSet* meshDescriptorSets,
     const uint32_t* vertexCounts,
     const VkBuffer* vertexBuffers,
     VkCommandBuffer* commandBuffers);

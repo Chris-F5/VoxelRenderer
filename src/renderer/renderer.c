@@ -74,40 +74,6 @@ Renderer createRenderer(GLFWwindow* window)
     // GPU MEMORY AND DESCRIPTOR SETS
 
     r.globalDescriptorSetLayout = createGlobalDescriptorSetLayout(r.device);
-    r.blockDescriptorSetLayout = createBlockDescriptorSetLayout(r.device);
-
-    r.blockDescriptorPool = createBlockDescriptorPool(r.device, r.swapchain.imageCount, 2);
-
-    {
-        FILE* blockFile;
-
-        // Block A
-        blockFile = fopen("a.block", "rb");
-
-        r.blockA = createBlock(
-            r.device,
-            r.physicalDevice,
-            r.blockDescriptorSetLayout,
-            r.blockDescriptorPool,
-            r.swapchain.imageCount,
-            blockFile);
-
-        fclose(blockFile);
-
-        // Block B
-
-        blockFile = fopen("b.block", "rb");
-
-        r.blockB = createBlock(
-            r.device,
-            r.physicalDevice,
-            r.blockDescriptorSetLayout,
-            r.blockDescriptorPool,
-            r.swapchain.imageCount,
-            blockFile);
-
-        fclose(blockFile);
-    }
     r.globalDescriptorSets = malloc(r.swapchain.imageCount * sizeof(VkDescriptorSet));
     r.globalUniformBuffers = malloc(r.swapchain.imageCount * sizeof(VkBuffer));
     r.globalUniformBuffersMemory = malloc(r.swapchain.imageCount * sizeof(VkDeviceMemory));
@@ -121,12 +87,48 @@ Renderer createRenderer(GLFWwindow* window)
         r.globalUniformBuffers,
         r.globalUniformBuffersMemory);
 
+    // SCEND DATA
+
+    r.sceneData = createSceneData(
+        r.device,
+        r.physicalDevice,
+        5);
+
+    {
+        FILE* blockFile;
+
+        // Block A
+        blockFile = fopen("a.block", "rb");
+
+        createBlock(
+            &r.sceneData,
+            r.device,
+            r.physicalDevice,
+            (vec3) { 0.0f, 0.0f, 0.0f },
+            blockFile);
+
+        fclose(blockFile);
+
+        // Block B
+
+        blockFile = fopen("b.block", "rb");
+
+        createBlock(
+            &r.sceneData,
+            r.device,
+            r.physicalDevice,
+            (vec3) { 0.0f, 0.5f, 2.5f },
+            blockFile);
+
+        fclose(blockFile);
+    }
+
     // GRAPHICS PIPELINE
 
     VkShaderModule vertShader = createShaderModule(r.device, "shader.vert.spv");
     VkShaderModule fragShader = createShaderModule(r.device, "shader.frag.spv");
 
-    VkDescriptorSetLayout descriptorSetLayouts[] = { r.globalDescriptorSetLayout, r.blockDescriptorSetLayout };
+    VkDescriptorSetLayout descriptorSetLayouts[] = { r.globalDescriptorSetLayout, r.sceneData.blocksDescriptorSetLayout };
     r.graphicsPipeline = createGraphicsPipeline(
         r.device,
         r.physicalDeviceProperties,
@@ -163,9 +165,9 @@ Renderer createRenderer(GLFWwindow* window)
 
     // COMMAND BUFFERS
 
-    uint32_t vertexCounts[] = { r.blockA.vertexBufferLength, r.blockB.vertexBufferLength };
-    VkBuffer vertexBuffers[] = { r.blockA.vertexBuffer, r.blockB.vertexBuffer };
-    VkDescriptorSet* blockDescriptorSets[] = { r.blockA.descriptorSets, r.blockB.descriptorSets };
+    uint32_t vertexCounts[] = { r.sceneData.vertexBuffersLength[0], r.sceneData.vertexBuffersLength[1] };
+    VkBuffer vertexBuffers[] = { r.sceneData.vertexBuffers[0], r.sceneData.vertexBuffers[1] };
+    VkDescriptorSet blockDescriptorSets[] = { r.sceneData.blockDescriptorSets[0], r.sceneData.blockDescriptorSets[1] };
 
     r.commandBuffers = (VkCommandBuffer*)malloc(r.swapchain.imageCount * sizeof(VkCommandBuffer));
     createRenderCommandBuffers(
@@ -255,13 +257,13 @@ void drawFrame(Renderer* r)
         0,
         sizeof(GlobalUniformBuffer));
 
-    glm_mat4_identity(r->blockA.descriptorData.model);
-    glm_rotate(r->blockA.descriptorData.model, (float)glfwGetTime() * 0.8f, (vec3) { 0.0f, 0.0f, 1.0f });
-    glm_translate(r->blockA.descriptorData.model, (vec3) { 0.0f, 0.0f, 3.0f });
-    updateBlockDescriptors(r->device, &r->blockA, imageIndex);
+    //glm_mat4_identity(r->blockA.descriptorData.model);
+    //glm_rotate(r->blockA.descriptorData.model, (float)glfwGetTime() * 0.8f, (vec3) { 0.0f, 0.0f, 1.0f });
+    //glm_translate(r->blockA.descriptorData.model, (vec3) { 0.0f, 0.0f, 3.0f });
+    //updateBlockDescriptors(r->device, &r->blockA, imageIndex);
 
-    glm_mat4_identity(r->blockB.descriptorData.model);
-    updateBlockDescriptors(r->device, &r->blockB, imageIndex);
+    //glm_mat4_identity(r->blockB.descriptorData.model);
+    //updateBlockDescriptors(r->device, &r->blockB, imageIndex);
 
     VkSubmitInfo submitInfo;
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -318,22 +320,9 @@ void cleanupRenderer(Renderer r)
     free(r.globalUniformBuffers);
     free(r.globalUniformBuffersMemory);
 
-    cleanupBlock(
-        r.device,
-        r.blockA,
-        r.swapchain.imageCount,
-        r.blockDescriptorPool);
-
-    cleanupBlock(
-        r.device,
-        r.blockB,
-        r.swapchain.imageCount,
-        r.blockDescriptorPool);
-
-    vkDestroyDescriptorPool(r.device, r.blockDescriptorPool, NULL);
+    cleanupSceneData(r.device, r.sceneData);
 
     vkDestroyDescriptorSetLayout(r.device, r.globalDescriptorSetLayout, NULL);
-    vkDestroyDescriptorSetLayout(r.device, r.blockDescriptorSetLayout, NULL);
 
     vkDestroyCommandPool(r.device, r.graphicsCommandPool, NULL);
     vkDestroyCommandPool(r.device, r.transientGraphicsCommandPool, NULL);

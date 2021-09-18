@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "device.h"
-#include "scene_data/block.h"
+#include "scene_data/mesh_gen.h"
 #include "vk_utils/exceptions.h"
 #include <vulkan/vulkan_core.h>
 
