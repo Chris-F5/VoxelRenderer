@@ -20,17 +20,6 @@ const VkVertexInputAttributeDescription VERTEX_INPUT_ATTRIBUTE_DESCRIPTIONS[] = 
 };
 const size_t VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_COUNT = sizeof(VERTEX_INPUT_ATTRIBUTE_DESCRIPTIONS) / sizeof(VERTEX_INPUT_ATTRIBUTE_DESCRIPTIONS[0]);
 
-const vec3 VOXEL_PALETTE[] = {
-    { 0.0, 0.0, 0.0 },
-    { 1.0, 0.0, 0.0 },
-    { 0.0, 1.0, 0.0 },
-    { 0.0, 0.0, 1.0 },
-    { 1.0, 1.0, 0.0 },
-    { 1.0, 0.0, 1.0 },
-    { 0.0, 1.0, 1.0 },
-    { 1.0, 1.0, 1.0 },
-};
-
 const vec3 FACE_POINTS_XP[] = {
     { 1, 0, 0 },
     { 1, 1, 0 },
@@ -136,6 +125,7 @@ bool isVoxelPresent(
 
 void allocateAndCreateBlockMesh(
     const Voxel* voxels,
+    const vec3* palette,
     uint32_t* vertexCount,
     Vertex** vertices)
 {
@@ -147,9 +137,9 @@ void allocateAndCreateBlockMesh(
     for (int i = 0; i < VOX_BLOCK_VOX_COUNT; i++)
         if (voxels[i] != 0) {
             vec3 color;
-            color[0] = VOXEL_PALETTE[voxels[i]][0];
-            color[1] = VOXEL_PALETTE[voxels[i]][1];
-            color[2] = VOXEL_PALETTE[voxels[i]][2];
+            color[0] = palette[voxels[i]][0];
+            color[1] = palette[voxels[i]][1];
+            color[2] = palette[voxels[i]][2];
 
             int x = i % VOX_BLOCK_SCALE;
             int y = i / VOX_BLOCK_SCALE % VOX_BLOCK_SCALE;
@@ -174,6 +164,7 @@ void createBlockVertexBuffer(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     const Voxel* voxels,
+    const vec3* palette,
     uint32_t* vertexBufferLength,
     VkBuffer* vertexBuffer,
     VkDeviceMemory* vertexBufferMemory)
@@ -181,6 +172,7 @@ void createBlockVertexBuffer(
     Vertex* vertices;
     allocateAndCreateBlockMesh(
         voxels,
+        palette,
         vertexBufferLength,
         &vertices);
 

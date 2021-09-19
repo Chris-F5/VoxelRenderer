@@ -63,16 +63,27 @@ VkDescriptorPool createBlockDescriptorPool(
 SceneData createSceneData(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
-    uint32_t maxBlockCount)
+    uint32_t maxBlockCount,
+    uint32_t maxPaletteCount)
 {
     SceneData sceneData;
     sceneData.maxBlockCount = maxBlockCount;
-    sceneData.currentBlock = 0;
+    sceneData.maxPaletteCount = maxPaletteCount;
+
+    sceneData.allocatedBlocks = 0;
+    sceneData.allocatedPalettes = 0;
 
     // VOXELS
 
-    sceneData.blocksVoxels = (Voxel*)malloc(
+    sceneData.blockVoxels = (Voxel*)malloc(
         maxBlockCount * VOX_BLOCK_VOX_COUNT * sizeof(Voxel));
+    sceneData.blockPaletteIds = (uint32_t*)malloc(
+        maxBlockCount * sizeof(uint32_t));
+
+    // PALETTES
+
+    sceneData.palettes = (vec3*)malloc(
+        maxPaletteCount * 256 * sizeof(vec3));
 
     // BLOCK INFO BUFFERS
 
@@ -134,17 +145,42 @@ SceneData createSceneData(
     return sceneData;
 }
 
+uint32_t createPalette(
+    SceneData* sceneData,
+    FILE* paletteFile)
+{
+    uint32_t currentPalette = sceneData->allocatedPalettes++;
+    vec3* palette = &sceneData->palettes[currentPalette * 256];
+
+    unsigned char* rawColors = malloc(256 * 3);
+    fread(rawColors, 3, 256, paletteFile);
+
+    for (int i = 0; i < 256; i++) {
+        palette[i][0] = (float)rawColors[i * 3 + 0] / 256.0f;
+        palette[i][1] = (float)rawColors[i * 3 + 1] / 256.0f;
+        palette[i][2] = (float)rawColors[i * 3 + 2] / 256.0f;
+    }
+
+    free(rawColors);
+
+    return currentPalette;
+}
+
 uint32_t createBlock(
     SceneData* sceneData,
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     vec3 pos,
+    uint32_t paletteId,
     FILE* blockFile)
 {
+    uint32_t currentBlock = sceneData->allocatedBlocks++;
+
     // VOXELS
 
-    Voxel* blockVoxels = &sceneData->blocksVoxels[sceneData->currentBlock * VOX_BLOCK_VOX_COUNT];
+    Voxel* blockVoxels = &sceneData->blockVoxels[currentBlock * VOX_BLOCK_VOX_COUNT];
     fread(blockVoxels, sizeof(Voxel), VOX_BLOCK_VOX_COUNT, blockFile);
+    sceneData->blockPaletteIds[currentBlock] = paletteId;
 
     // BLOCK INFO BUFFER
 
@@ -155,7 +191,7 @@ uint32_t createBlock(
         device,
         &blockInfo,
         sceneData->blocksInfoBufferMemory,
-        sceneData->currentBlock * sizeof(BlockDescriptorUniformBuffer),
+        currentBlock * sizeof(BlockDescriptorUniformBuffer),
         sizeof(BlockDescriptorUniformBuffer));
 
     // MESH
@@ -164,16 +200,20 @@ uint32_t createBlock(
         device,
         physicalDevice,
         blockVoxels,
-        &sceneData->vertexBuffersLength[sceneData->currentBlock],
-        &sceneData->vertexBuffers[sceneData->currentBlock],
-        &sceneData->vertexBuffersMemory[sceneData->currentBlock]);
+        &sceneData->palettes[paletteId * 256],
+        &sceneData->vertexBuffersLength[currentBlock],
+        &sceneData->vertexBuffers[currentBlock],
+        &sceneData->vertexBuffersMemory[currentBlock]);
 
-    return sceneData->currentBlock++;
+    return currentBlock;
 }
 
 void cleanupSceneData(VkDevice device, SceneData sceneData)
 {
-    free(sceneData.blocksVoxels);
+    free(sceneData.blockVoxels);
+    free(sceneData.blockPaletteIds);
+
+    free(sceneData.palettes);
 
     vkDestroyBuffer(device, sceneData.blocksInfoBuffer, NULL);
     vkFreeMemory(device, sceneData.blocksInfoBufferMemory, NULL);
@@ -182,7 +222,7 @@ void cleanupSceneData(VkDevice device, SceneData sceneData)
     vkDestroyDescriptorSetLayout(device, sceneData.blocksDescriptorSetLayout, NULL);
     free(sceneData.blockDescriptorSets);
 
-    for (int i = 0; i < sceneData.currentBlock; i++) {
+    for (int i = 0; i < sceneData.allocatedBlocks; i++) {
         vkDestroyBuffer(device, sceneData.vertexBuffers[i], NULL);
         vkFreeMemory(device, sceneData.vertexBuffersMemory[i], NULL);
     }

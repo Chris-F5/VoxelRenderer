@@ -16,6 +16,7 @@ void createBlockVertexBuffer(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     const Voxel* voxels,
+    const vec3* palette,
     uint32_t* vertexBufferLength,
     VkBuffer* vertexBuffer,
     VkDeviceMemory* vertexBufferMemory);

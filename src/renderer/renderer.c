@@ -92,7 +92,15 @@ Renderer createRenderer(GLFWwindow* window)
     r.sceneData = createSceneData(
         r.device,
         r.physicalDevice,
-        5);
+        5,
+        3);
+
+    FILE* paletteFile;
+    paletteFile = fopen("a.palette", "rb");
+
+    uint32_t palette = createPalette(
+        &r.sceneData,
+        paletteFile);
 
     {
         FILE* blockFile;
@@ -105,6 +113,7 @@ Renderer createRenderer(GLFWwindow* window)
             r.device,
             r.physicalDevice,
             (vec3) { 0.0f, 0.0f, 0.0f },
+            palette,
             blockFile);
 
         fclose(blockFile);
@@ -118,6 +127,7 @@ Renderer createRenderer(GLFWwindow* window)
             r.device,
             r.physicalDevice,
             (vec3) { 0.0f, 0.5f, 2.5f },
+            palette,
             blockFile);
 
         fclose(blockFile);

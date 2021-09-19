@@ -17,9 +17,15 @@ typedef struct {
 
 typedef struct {
     uint32_t maxBlockCount;
-    uint32_t currentBlock;
+    uint32_t maxPaletteCount;
 
-    Voxel* blocksVoxels;
+    uint32_t allocatedBlocks;
+    uint32_t allocatedPalettes;
+
+    Voxel* blockVoxels;
+    uint32_t* blockPaletteIds;
+
+    vec3* palettes;
 
     VkBuffer blocksInfoBuffer;
     VkDeviceMemory blocksInfoBufferMemory;
@@ -36,13 +42,19 @@ typedef struct {
 SceneData createSceneData(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
-    uint32_t maxBlockCount);
+    uint32_t maxBlockCount,
+    uint32_t maxPaletteCount);
+
+uint32_t createPalette(
+    SceneData* sceneData,
+    FILE* paletteFile);
 
 uint32_t createBlock(
     SceneData* sceneData,
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     vec3 pos,
+    uint32_t paletteId,
     FILE* blockFile);
 
 void cleanupSceneData(VkDevice device, SceneData sceneData);
