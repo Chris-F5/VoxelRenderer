@@ -3,6 +3,9 @@
 
 #include <vulkan/vulkan.h>
 
+#include "scene_data/object.h"
+#include "scene_data/scene_data.h"
+
 VkCommandBuffer* createRenderCommandBuffers(
     VkDevice device,
     VkCommandPool commandPool,
@@ -13,10 +16,9 @@ VkCommandBuffer* createRenderCommandBuffers(
     VkPipelineLayout graphicsPipelineLayout,
     const VkFramebuffer* framebuffers,
     const VkDescriptorSet* globalDescriptorSets,
-    uint32_t modelCount,
-    VkDescriptorSet* meshDescriptorSets,
-    const uint32_t* vertexCounts,
-    const VkBuffer* vertexBuffers,
+    const SceneData* sceneData,
+    const uint32_t objectCount,
+    const Object* objects,
     VkCommandBuffer* commandBuffers);
 
 #endif

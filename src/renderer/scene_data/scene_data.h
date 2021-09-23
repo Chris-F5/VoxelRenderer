@@ -1,6 +1,7 @@
 #ifndef SCENE_DATA
 #define SCENE_DATA
 
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <cglm/types.h>
@@ -9,7 +10,13 @@
 extern const uint32_t VOX_BLOCK_SCALE;
 extern const uint32_t VOX_BLOCK_VOX_COUNT;
 
-typedef char Voxel;
+typedef unsigned char Voxel;
+typedef uint32_t PaletteRef;
+
+typedef struct {
+    uint32_t blockId;
+    PaletteRef paletteRef;
+} BlockRef;
 
 typedef struct {
     mat4 model;
@@ -23,7 +30,6 @@ typedef struct {
     uint32_t allocatedPalettes;
 
     Voxel* blockVoxels;
-    uint32_t* blockPaletteIds;
 
     vec3* palettes;
 
@@ -49,13 +55,15 @@ uint32_t createPalette(
     SceneData* sceneData,
     FILE* paletteFile);
 
-uint32_t createBlock(
+void createBlock(
     SceneData* sceneData,
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     vec3 pos,
-    uint32_t paletteId,
-    FILE* blockFile);
+    PaletteRef paletteRef,
+    FILE* blockFile,
+    bool* created,
+    BlockRef* blockRef);
 
 void cleanupSceneData(VkDevice device, SceneData sceneData);
 

@@ -92,46 +92,21 @@ Renderer createRenderer(GLFWwindow* window)
     r.sceneData = createSceneData(
         r.device,
         r.physicalDevice,
-        5,
+        8,
         3);
 
-    FILE* paletteFile;
-    paletteFile = fopen("a.palette", "rb");
+    FILE* objectFile;
 
-    uint32_t palette = createPalette(
+    // Block A
+    objectFile = fopen("object.voxobj", "rb");
+
+    r.object = createObject(
+        r.device,
+        r.physicalDevice,
         &r.sceneData,
-        paletteFile);
+        objectFile);
 
-    {
-        FILE* blockFile;
-
-        // Block A
-        blockFile = fopen("a.block", "rb");
-
-        createBlock(
-            &r.sceneData,
-            r.device,
-            r.physicalDevice,
-            (vec3) { 0.0f, 0.0f, 0.0f },
-            palette,
-            blockFile);
-
-        fclose(blockFile);
-
-        // Block B
-
-        blockFile = fopen("b.block", "rb");
-
-        createBlock(
-            &r.sceneData,
-            r.device,
-            r.physicalDevice,
-            (vec3) { 0.0f, 0.5f, 2.5f },
-            palette,
-            blockFile);
-
-        fclose(blockFile);
-    }
+    fclose(objectFile);
 
     // GRAPHICS PIPELINE
 
@@ -175,9 +150,7 @@ Renderer createRenderer(GLFWwindow* window)
 
     // COMMAND BUFFERS
 
-    uint32_t vertexCounts[] = { r.sceneData.vertexBuffersLength[0], r.sceneData.vertexBuffersLength[1] };
-    VkBuffer vertexBuffers[] = { r.sceneData.vertexBuffers[0], r.sceneData.vertexBuffers[1] };
-    VkDescriptorSet blockDescriptorSets[] = { r.sceneData.blockDescriptorSets[0], r.sceneData.blockDescriptorSets[1] };
+    Object objects[] = { r.object };
 
     r.commandBuffers = (VkCommandBuffer*)malloc(r.swapchain.imageCount * sizeof(VkCommandBuffer));
     createRenderCommandBuffers(
@@ -190,10 +163,9 @@ Renderer createRenderer(GLFWwindow* window)
         r.graphicsPipeline.pipelineLayout,
         r.framebuffers,
         r.globalDescriptorSets,
-        sizeof(vertexBuffers) / sizeof(vertexBuffers[0]),
-        blockDescriptorSets,
-        vertexCounts,
-        vertexBuffers,
+        &r.sceneData,
+        sizeof(objects) / sizeof(objects[0]),
+        objects,
         r.commandBuffers);
 
     // SYNCHRONIZATION OBJECTS
@@ -314,6 +286,7 @@ void cleanupRenderer(Renderer r)
 
     free(r.commandBuffers);
     free(r.swapchainImagesInFlight);
+    cleanupObject(&r.sceneData, r.object);
 
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(r.device, r.imageAvailableSemaphores[i], NULL);

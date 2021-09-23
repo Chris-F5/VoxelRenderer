@@ -77,8 +77,6 @@ SceneData createSceneData(
 
     sceneData.blockVoxels = (Voxel*)malloc(
         maxBlockCount * VOX_BLOCK_VOX_COUNT * sizeof(Voxel));
-    sceneData.blockPaletteIds = (uint32_t*)malloc(
-        maxBlockCount * sizeof(uint32_t));
 
     // PALETTES
 
@@ -166,21 +164,32 @@ uint32_t createPalette(
     return currentPalette;
 }
 
-uint32_t createBlock(
+void createBlock(
     SceneData* sceneData,
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     vec3 pos,
-    uint32_t paletteId,
-    FILE* blockFile)
+    PaletteRef paletteRef,
+    FILE* blockFile,
+    bool* created,
+    BlockRef* blockRef)
 {
-    uint32_t currentBlock = sceneData->allocatedBlocks++;
+    blockRef->blockId = sceneData->allocatedBlocks;
+    blockRef->paletteRef = paletteRef;
 
     // VOXELS
 
-    Voxel* blockVoxels = &sceneData->blockVoxels[currentBlock * VOX_BLOCK_VOX_COUNT];
+    Voxel* blockVoxels = &sceneData->blockVoxels[blockRef->blockId * VOX_BLOCK_VOX_COUNT];
     fread(blockVoxels, sizeof(Voxel), VOX_BLOCK_VOX_COUNT, blockFile);
-    sceneData->blockPaletteIds[currentBlock] = paletteId;
+    *created = false;
+    for (int i = 0; i < VOX_BLOCK_VOX_COUNT; i++)
+        if (blockVoxels[i]) {
+            *created = true;
+            break;
+        }
+
+    if (!*created)
+        return;
 
     // BLOCK INFO BUFFER
 
@@ -191,7 +200,7 @@ uint32_t createBlock(
         device,
         &blockInfo,
         sceneData->blocksInfoBufferMemory,
-        currentBlock * sizeof(BlockDescriptorUniformBuffer),
+        blockRef->blockId * sizeof(BlockDescriptorUniformBuffer),
         sizeof(BlockDescriptorUniformBuffer));
 
     // MESH
@@ -200,18 +209,17 @@ uint32_t createBlock(
         device,
         physicalDevice,
         blockVoxels,
-        &sceneData->palettes[paletteId * 256],
-        &sceneData->vertexBuffersLength[currentBlock],
-        &sceneData->vertexBuffers[currentBlock],
-        &sceneData->vertexBuffersMemory[currentBlock]);
+        &sceneData->palettes[blockRef->paletteRef * 256],
+        &sceneData->vertexBuffersLength[blockRef->blockId],
+        &sceneData->vertexBuffers[blockRef->blockId],
+        &sceneData->vertexBuffersMemory[blockRef->blockId]);
 
-    return currentBlock;
+    sceneData->allocatedBlocks++;
 }
 
 void cleanupSceneData(VkDevice device, SceneData sceneData)
 {
     free(sceneData.blockVoxels);
-    free(sceneData.blockPaletteIds);
 
     free(sceneData.palettes);
 

@@ -12,6 +12,7 @@
 #include "device.h"
 #include "graphics_pipeline.h"
 #include "scene_data/scene_data.h"
+#include "scene_data/object.h"
 #include "swapchain.h"
 
 #define MAX_FRAMES_IN_FLIGHT 2
@@ -65,6 +66,7 @@ typedef struct
     // SCENE
 
     SceneData sceneData;
+    Object object;
 
     Camera camera;
 } Renderer;
