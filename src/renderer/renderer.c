@@ -92,21 +92,8 @@ Renderer createRenderer(GLFWwindow* window)
     r.sceneData = createSceneData(
         r.device,
         r.physicalDevice,
-        8,
-        3);
-
-    FILE* objectFile;
-
-    // Block A
-    objectFile = fopen("object.voxobj", "rb");
-
-    r.object = createObject(
-        r.device,
-        r.physicalDevice,
-        &r.sceneData,
-        objectFile);
-
-    fclose(objectFile);
+        12,
+        12);
 
     // GRAPHICS PIPELINE
 
@@ -150,8 +137,6 @@ Renderer createRenderer(GLFWwindow* window)
 
     // COMMAND BUFFERS
 
-    Object objects[] = { r.object };
-
     r.commandBuffers = (VkCommandBuffer*)malloc(r.swapchain.imageCount * sizeof(VkCommandBuffer));
     createRenderCommandBuffers(
         r.device,
@@ -164,8 +149,6 @@ Renderer createRenderer(GLFWwindow* window)
         r.framebuffers,
         r.globalDescriptorSets,
         &r.sceneData,
-        sizeof(objects) / sizeof(objects[0]),
-        objects,
         r.commandBuffers);
 
     // SYNCHRONIZATION OBJECTS
@@ -207,6 +190,23 @@ Renderer createRenderer(GLFWwindow* window)
     r.camera.farClip = 100.0f;
 
     return r;
+}
+
+void recreateCommandBuffers(Renderer* r)
+{
+    vkDeviceWaitIdle(r->device);
+    createRenderCommandBuffers(
+        r->device,
+        r->graphicsCommandPool,
+        r->swapchain.imageCount,
+        r->graphicsPipeline.renderPass,
+        r->swapchain.extent,
+        r->graphicsPipeline.pipeline,
+        r->graphicsPipeline.pipelineLayout,
+        r->framebuffers,
+        r->globalDescriptorSets,
+        &r->sceneData,
+        r->commandBuffers);
 }
 
 void drawFrame(Renderer* r)
@@ -286,7 +286,6 @@ void cleanupRenderer(Renderer r)
 
     free(r.commandBuffers);
     free(r.swapchainImagesInFlight);
-    cleanupObject(&r.sceneData, r.object);
 
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(r.device, r.imageAvailableSemaphores[i], NULL);

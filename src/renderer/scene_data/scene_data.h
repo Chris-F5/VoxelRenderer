@@ -51,7 +51,7 @@ SceneData createSceneData(
     uint32_t maxBlockCount,
     uint32_t maxPaletteCount);
 
-uint32_t createPalette(
+PaletteRef createPalette(
     SceneData* sceneData,
     FILE* paletteFile);
 

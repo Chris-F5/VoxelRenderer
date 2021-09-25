@@ -5,7 +5,7 @@
 #include "vk_utils/command_buffer.h"
 #include "vk_utils/exceptions.h"
 
-VkCommandBuffer* createRenderCommandBuffers(
+void createRenderCommandBuffers(
     VkDevice device,
     VkCommandPool commandPool,
     uint32_t count,
@@ -16,8 +16,6 @@ VkCommandBuffer* createRenderCommandBuffers(
     const VkFramebuffer* framebuffers,
     const VkDescriptorSet* globalDescriptorSets,
     const SceneData* sceneData,
-    const uint32_t objectCount,
-    const Object* objects,
     VkCommandBuffer* commandBuffers)
 {
     allocateCommandBuffers(device, commandPool, count, commandBuffers);
@@ -67,24 +65,21 @@ VkCommandBuffer* createRenderCommandBuffers(
             0,
             NULL);
 
-        for (int o = 0; o < objectCount; o++)
-            for (int b = 0; b < objects[o].width * objects[o].height * objects[o].depth; b++)
-                if (objects[o].blocksMask[b]) {
-                    uint32_t blockId = objects[o].blocks[b].blockId;
-                    vkCmdBindDescriptorSets(
-                        commandBuffers[s],
-                        VK_PIPELINE_BIND_POINT_GRAPHICS,
-                        graphicsPipelineLayout,
-                        1,
-                        1,
-                        &sceneData->blockDescriptorSets[blockId],
-                        0,
-                        NULL);
+        for (int b = 0; b < sceneData->allocatedBlocks; b++) {
+            vkCmdBindDescriptorSets(
+                commandBuffers[s],
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                graphicsPipelineLayout,
+                1,
+                1,
+                &sceneData->blockDescriptorSets[b],
+                0,
+                NULL);
 
-                    vkCmdBindVertexBuffers(commandBuffers[s], 0, 1, &sceneData->vertexBuffers[blockId], vertexBufferOffsets);
+            vkCmdBindVertexBuffers(commandBuffers[s], 0, 1, &sceneData->vertexBuffers[b], vertexBufferOffsets);
 
-                    vkCmdDraw(commandBuffers[s], sceneData->vertexBuffersLength[blockId], 1, 0, 0);
-                }
+            vkCmdDraw(commandBuffers[s], sceneData->vertexBuffersLength[b], 1, 0, 0);
+        }
 
         vkCmdEndRenderPass(commandBuffers[s]);
 
@@ -92,6 +87,4 @@ VkCommandBuffer* createRenderCommandBuffers(
             vkEndCommandBuffer(commandBuffers[s]),
             "recording render command buffer");
     }
-
-    return commandBuffers;
 }

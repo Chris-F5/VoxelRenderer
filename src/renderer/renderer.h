@@ -12,7 +12,6 @@
 #include "device.h"
 #include "graphics_pipeline.h"
 #include "scene_data/scene_data.h"
-#include "scene_data/object.h"
 #include "swapchain.h"
 
 #define MAX_FRAMES_IN_FLIGHT 2
@@ -63,15 +62,13 @@ typedef struct
     int* swapchainImagesInFlight;
     int currentFrame;
 
-    // SCENE
-
     SceneData sceneData;
-    Object object;
-
     Camera camera;
 } Renderer;
 
 Renderer createRenderer(GLFWwindow* window);
+
+void recreateCommandBuffers(Renderer* r);
 
 void drawFrame(Renderer* r);
 

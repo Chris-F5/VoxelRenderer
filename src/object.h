@@ -5,7 +5,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include "scene_data.h"
+#include "renderer/scene_data/scene_data.h"
 
 typedef struct {
     uint32_t width;

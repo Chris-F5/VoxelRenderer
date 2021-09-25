@@ -143,11 +143,11 @@ SceneData createSceneData(
     return sceneData;
 }
 
-uint32_t createPalette(
+PaletteRef createPalette(
     SceneData* sceneData,
     FILE* paletteFile)
 {
-    uint32_t currentPalette = sceneData->allocatedPalettes++;
+    PaletteRef currentPalette = sceneData->allocatedPalettes++;
     vec3* palette = &sceneData->palettes[currentPalette * 256];
 
     unsigned char* rawColors = malloc(256 * 3);
