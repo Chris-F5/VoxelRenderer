@@ -12,11 +12,7 @@ extern const uint32_t VOX_BLOCK_VOX_COUNT;
 
 typedef unsigned char Voxel;
 typedef uint32_t PaletteRef;
-
-typedef struct {
-    uint32_t blockId;
-    PaletteRef paletteRef;
-} BlockRef;
+typedef uint32_t BlockRef;
 
 typedef struct {
     mat4 model;
@@ -31,7 +27,7 @@ typedef struct {
 
     Voxel* blockVoxels;
 
-    vec3* palettes;
+    vec3* paletteColors;
 
     VkBuffer blocksInfoBuffer;
     VkDeviceMemory blocksInfoBufferMemory;
@@ -55,15 +51,30 @@ PaletteRef createPalette(
     SceneData* sceneData,
     FILE* paletteFile);
 
-void createBlock(
-    SceneData* sceneData,
+BlockRef createEmptyBlock(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
+    SceneData* sceneData,
+    vec3 pos,
+    PaletteRef paletteRef);
+
+BlockRef createBlockFromFile(
+    VkDevice device,
+    VkPhysicalDevice physicalDevice,
+    SceneData* sceneData,
     vec3 pos,
     PaletteRef paletteRef,
-    FILE* blockFile,
-    bool* created,
-    BlockRef* blockRef);
+    FILE* blockFile);
+
+Voxel* getBlockVoxels(
+    SceneData* sceneData,
+    BlockRef block);
+
+void updateBlockVertexBuffer(
+    VkDevice device,
+    SceneData* sceneData,
+    PaletteRef palette,
+    BlockRef block);
 
 void cleanupSceneData(VkDevice device, SceneData sceneData);
 

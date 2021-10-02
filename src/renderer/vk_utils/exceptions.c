@@ -3,10 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-char *vkResultToString(VkResult result)
+char* vkResultToString(VkResult result)
 {
-    switch (result)
-    {
+    switch (result) {
     case VK_SUCCESS:
         return "VK_SUCCESS";
     case VK_NOT_READY:
@@ -73,14 +72,14 @@ char *vkResultToString(VkResult result)
         return "VK_ERROR_NOT_PERMITTED_EXT";
     case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT:
         return "VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT";
+    default:
+        return "UNKNNOWN VULKAN ERROR";
     }
-    return "UNKNNOWN VULKAN ERROR";
 }
 
-void handleVkResult(VkResult result, char *action)
+void handleVkResult(VkResult result, char* action)
 {
-    if (result != VK_SUCCESS)
-    {
+    if (result != VK_SUCCESS) {
         printf("Exiting because of vulkan error:\n\terror:'%s'\n\taction: '%s'\n", vkResultToString(result), action);
         exit(EXIT_FAILURE);
     }

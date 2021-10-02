@@ -123,15 +123,12 @@ bool isVoxelPresent(
     return voxels[i] != 0;
 }
 
-void allocateAndCreateBlockMesh(
+void createBlockMesh(
     const Voxel* voxels,
     const vec3* palette,
     uint32_t* vertexCount,
-    Vertex** vertices)
+    Vertex* vertices)
 {
-    const uint32_t maxVertexCount = VOX_BLOCK_VOX_COUNT * 18;
-    *vertices = (Vertex*)malloc(maxVertexCount * sizeof(Vertex));
-
     *vertexCount = 0;
 
     for (int i = 0; i < VOX_BLOCK_VOX_COUNT; i++)
@@ -146,52 +143,67 @@ void allocateAndCreateBlockMesh(
             int z = i / (VOX_BLOCK_SCALE * VOX_BLOCK_SCALE);
 
             if (!isVoxelPresent(x + 1, y + 0, z + 0, voxels))
-                addFace(x, y, z, FACE_POINTS_XP, color, vertexCount, *vertices);
+                addFace(x, y, z, FACE_POINTS_XP, color, vertexCount, vertices);
             if (!isVoxelPresent(x - 1, y + 0, z + 0, voxels))
-                addFace(x, y, z, FACE_POINTS_XN, color, vertexCount, *vertices);
+                addFace(x, y, z, FACE_POINTS_XN, color, vertexCount, vertices);
             if (!isVoxelPresent(x + 0, y + 1, z + 0, voxels))
-                addFace(x, y, z, FACE_POINTS_YP, color, vertexCount, *vertices);
+                addFace(x, y, z, FACE_POINTS_YP, color, vertexCount, vertices);
             if (!isVoxelPresent(x + 0, y - 1, z + 0, voxels))
-                addFace(x, y, z, FACE_POINTS_YN, color, vertexCount, *vertices);
+                addFace(x, y, z, FACE_POINTS_YN, color, vertexCount, vertices);
             if (!isVoxelPresent(x + 0, y + 0, z + 1, voxels))
-                addFace(x, y, z, FACE_POINTS_ZP, color, vertexCount, *vertices);
+                addFace(x, y, z, FACE_POINTS_ZP, color, vertexCount, vertices);
             if (!isVoxelPresent(x + 0, y + 0, z - 1, voxels))
-                addFace(x, y, z, FACE_POINTS_ZN, color, vertexCount, *vertices);
+                addFace(x, y, z, FACE_POINTS_ZN, color, vertexCount, vertices);
         }
 }
 
-void createBlockVertexBuffer(
+void createEmptyBlockVertexBuffer(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
+    uint32_t* vertexBufferLength,
+    VkBuffer* vertexBuffer,
+    VkDeviceMemory* vertexBufferMemory)
+{
+    *vertexBufferLength = 0;
+    const uint32_t maxVertexCount = VOX_BLOCK_VOX_COUNT * 18;
+    createBuffer(
+        device,
+        physicalDevice,
+        maxVertexCount * sizeof(Vertex),
+        0,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        vertexBuffer,
+        vertexBufferMemory);
+}
+
+void writeBlockVertexBuffer(
+    VkDevice device,
     const Voxel* voxels,
     const vec3* palette,
     uint32_t* vertexBufferLength,
     VkBuffer* vertexBuffer,
     VkDeviceMemory* vertexBufferMemory)
 {
-    Vertex* vertices;
-    allocateAndCreateBlockMesh(
+    if (*vertexBuffer == VK_NULL_HANDLE) {
+        puts("Cant write block vertices to null vertex buffer. Exiting.");
+        exit(EXIT_FAILURE);
+    }
+    const uint32_t maxVertexCount = VOX_BLOCK_VOX_COUNT * 18;
+    Vertex* vertices = (Vertex*)malloc(maxVertexCount * sizeof(Vertex));
+    createBlockMesh(
         voxels,
         palette,
         vertexBufferLength,
-        &vertices);
+        vertices);
 
-    createBuffer(
-        device,
-        physicalDevice,
-        *vertexBufferLength * sizeof(Vertex),
-        0,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        vertexBuffer,
-        vertexBufferMemory);
-
-    copyDataToBuffer(
-        device,
-        (void*)vertices,
-        *vertexBufferMemory,
-        0,
-        *vertexBufferLength * sizeof(Vertex));
+    if (*vertexBufferLength != 0)
+        copyDataToBuffer(
+            device,
+            (void*)vertices,
+            *vertexBufferMemory,
+            0,
+            *vertexBufferLength * sizeof(Vertex));
 
     free(vertices);
 }

@@ -37,13 +37,27 @@ int main(int argc, char** argv)
 
     objectFile = fopen("object.voxobj", "rb");
 
-    Object object = createObject(
+    Object object = createObjectFromFile(
         renderer.device,
         renderer.physicalDevice,
         &renderer.sceneData,
+        (vec3) { 0, 0, 0 },
         objectFile);
 
     fclose(objectFile);
+
+    setObjectVoxel(
+        renderer.device,
+        renderer.physicalDevice,
+        &renderer.sceneData,
+        &object,
+        (ivec3) { 1, 0, 0 },
+        0);
+
+    updateObjectVertexBuffers(
+        renderer.device,
+        &renderer.sceneData,
+        object);
 
     recreateCommandBuffers(&renderer);
 

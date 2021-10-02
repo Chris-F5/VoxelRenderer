@@ -38,5 +38,7 @@ target/%.voxobj: %.voxobj
 
 run: all
 	cd target; ./$(OUTPUTNAME)
+debug: all
+	cd target; gdb $(OUTPUTNAME)
 clean:
 	rm -fr target obj

@@ -92,7 +92,7 @@ Renderer createRenderer(GLFWwindow* window)
     r.sceneData = createSceneData(
         r.device,
         r.physicalDevice,
-        12,
+        32,
         12);
 
     // GRAPHICS PIPELINE
