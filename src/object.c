@@ -36,10 +36,15 @@ Object createObjectFromFile(
     vec3 pos,
     FILE* objectFile)
 {
+    if(objectFile == NULL){
+        puts("Oject file is NULL. Exiting.");
+        exit(EXIT_FAILURE);
+    }
+
     uint32_t dimensions[3];
     fread(&dimensions, sizeof(uint32_t), 3, objectFile);
 
-    PaletteRef palette = createPalette(sceneData, objectFile);
+    PaletteRef palette = createPaletteFromFile(sceneData, objectFile);
 
     Object object = createEmptyObject(
         sceneData,

@@ -47,7 +47,11 @@ SceneData createSceneData(
     uint32_t maxBlockCount,
     uint32_t maxPaletteCount);
 
-PaletteRef createPalette(
+PaletteRef createEmptyPalette(SceneData* sceneData);
+
+vec3* getPalette(SceneData* sceneData, PaletteRef palette);
+
+PaletteRef createPaletteFromFile(
     SceneData* sceneData,
     FILE* paletteFile);
 

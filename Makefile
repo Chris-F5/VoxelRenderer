@@ -9,7 +9,7 @@ DEPENDS = $(patsubst ./src/%.c, obj/%.d,$(SRCS))
 
 .PHONY: run clean all
 
-all: target/$(OUTPUTNAME) target/shader.vert.spv target/shader.frag.spv target/a.block target/b.block target/a.palette target/object.voxobj
+all: target/$(OUTPUTNAME) target/shader.vert.spv target/shader.frag.spv target/object.voxobj target/monu1.ply
 
 -include $(DEPENDS)
 
@@ -24,21 +24,19 @@ obj/%.o: src/%.c
 target/%.spv: src/%
 	glslc $< -o $@
 
-target/%.block: %.block
-	mkdir -p target
-	cp $< $@
-
-target/%.palette: %.palette
-	mkdir -p target
-	cp $< $@
-
 target/%.voxobj: %.voxobj
+	mkdir -p target
+	cp $< $@
+
+target/%.ply: %.ply
 	mkdir -p target
 	cp $< $@
 
 run: all
 	cd target; ./$(OUTPUTNAME)
+
 debug: all
 	cd target; gdb $(OUTPUTNAME)
+
 clean:
 	rm -fr target obj

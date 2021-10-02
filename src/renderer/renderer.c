@@ -92,7 +92,7 @@ Renderer createRenderer(GLFWwindow* window)
     r.sceneData = createSceneData(
         r.device,
         r.physicalDevice,
-        32,
+        1024,
         12);
 
     // GRAPHICS PIPELINE
@@ -187,7 +187,7 @@ Renderer createRenderer(GLFWwindow* window)
     r.camera.aspectRatio = (float)r.swapchain.extent.width / (float)r.swapchain.extent.height;
     r.camera.fov = 90.0f;
     r.camera.nearClip = 0.1f;
-    r.camera.farClip = 100.0f;
+    r.camera.farClip = 1000.0f;
 
     return r;
 }

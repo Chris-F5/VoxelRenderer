@@ -17,20 +17,20 @@ typedef struct {
     bool* blocksMask;
 } Object;
 
+Object createEmptyObject(
+    SceneData* sceneData,
+    vec3 pos,
+    uint32_t width,
+    uint32_t height,
+    uint32_t depth,
+    PaletteRef palette);
+
 Object createObjectFromFile(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     SceneData* sceneData,
     vec3 pos,
     FILE* objectFile);
-
-void resizeObject(
-    SceneData* sceneData,
-    Object* object,
-    ivec3 newOrigin,
-    uint32_t newWidth,
-    uint32_t newHeight,
-    uint32_t newDepth);
 
 void setObjectVoxel(
     VkDevice device,

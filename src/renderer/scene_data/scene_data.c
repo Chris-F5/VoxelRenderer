@@ -10,7 +10,7 @@
 #include "../vk_utils/exceptions.h"
 #include "mesh_gen.h"
 
-const uint32_t VOX_BLOCK_SCALE = 2;
+const uint32_t VOX_BLOCK_SCALE = 8;
 const uint32_t VOX_BLOCK_VOX_COUNT = VOX_BLOCK_SCALE * VOX_BLOCK_SCALE * VOX_BLOCK_SCALE;
 
 VkDescriptorSetLayout createBlockDescriptorSetLayout(VkDevice device)
@@ -144,25 +144,47 @@ SceneData createSceneData(
     return sceneData;
 }
 
-PaletteRef createPalette(
+PaletteRef createEmptyPalette(SceneData* sceneData)
+{
+    PaletteRef palette = sceneData->allocatedPalettes++;
+    if(sceneData->allocatedPalettes >= sceneData->maxPaletteCount){
+        printf("Max palette count (%d) reached. Exiting.\n", sceneData->maxPaletteCount);
+        exit(EXIT_FAILURE);
+    }
+    vec3* data = getPalette(sceneData, palette);
+    memset(data, 0xFF, sizeof(vec3) * 256);
+    return palette;
+}
+
+vec3* getPalette(SceneData* sceneData, PaletteRef palette)
+{
+    return &sceneData->paletteColors[palette * 256];
+}
+
+PaletteRef createPaletteFromFile(
     SceneData* sceneData,
     FILE* paletteFile)
 {
-    PaletteRef currentPalette = sceneData->allocatedPalettes++;
-    vec3* palette = &sceneData->paletteColors[currentPalette * 256];
+    if(paletteFile == NULL){
+        puts("Palette file is NULL. Exiting.");
+        exit(EXIT_FAILURE);
+    }
+
+    PaletteRef paletteRef = createEmptyPalette(sceneData);
+    vec3* paletteData = getPalette(sceneData, paletteRef);
 
     unsigned char* rawColors = malloc(256 * 3);
     fread(rawColors, 3, 256, paletteFile);
 
     for (int i = 0; i < 256; i++) {
-        palette[i][0] = (float)rawColors[i * 3 + 0] / 256.0f;
-        palette[i][1] = (float)rawColors[i * 3 + 1] / 256.0f;
-        palette[i][2] = (float)rawColors[i * 3 + 2] / 256.0f;
+        paletteData[i][0] = (float)rawColors[i * 3 + 0] / 256.0f;
+        paletteData[i][1] = (float)rawColors[i * 3 + 1] / 256.0f;
+        paletteData[i][2] = (float)rawColors[i * 3 + 2] / 256.0f;
     }
 
     free(rawColors);
 
-    return currentPalette;
+    return paletteRef;
 }
 
 BlockRef createEmptyBlock(
@@ -174,6 +196,11 @@ BlockRef createEmptyBlock(
 {
     BlockRef blockRef;
     blockRef = sceneData->allocatedBlocks++;
+
+    if(sceneData->allocatedBlocks >= sceneData->maxBlockCount){
+        printf("Max block count (%d) reached. Exiting.\n", sceneData->maxBlockCount);
+        exit(EXIT_FAILURE);
+    }
 
     // VOXELS
 
@@ -212,6 +239,11 @@ BlockRef createBlockFromFile(
     PaletteRef paletteRef,
     FILE* blockFile)
 {
+    if(blockFile == NULL){
+        puts("Block file is NULL. Exiting.");
+        exit(EXIT_FAILURE);
+    }
+
     BlockRef block = createEmptyBlock(
         device,
         physicalDevice,
@@ -253,7 +285,7 @@ void updateBlockVertexBuffer(
     writeBlockVertexBuffer(
         device,
         getBlockVoxels(sceneData, block),
-        &sceneData->paletteColors[palette * 256],
+        getPalette(sceneData, palette),
         &sceneData->vertexBuffersLength[block],
         &sceneData->vertexBuffers[block],
         &sceneData->vertexBuffersMemory[block]);

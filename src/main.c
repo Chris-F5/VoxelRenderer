@@ -9,12 +9,13 @@
 #include "object.h"
 #include "renderer/renderer.h"
 #include "renderer/scene_data/scene_data.h"
+#include "pointmap_object_loader.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
-const float moveSpeed = 0.0005f;
-const float rotSpeed = 0.01f;
+const float moveSpeed = 0.05f;
+const float rotSpeed = 0.2f;
 
 void glfwErrorCallback(int _, const char* errorString)
 {
@@ -33,31 +34,34 @@ int main(int argc, char** argv)
 
     Renderer renderer = createRenderer(window);
 
-    FILE* objectFile;
+    FILE* pointFile;
 
-    objectFile = fopen("object.voxobj", "rb");
+    pointFile = fopen("monu1.ply", "rb");
 
-    Object object = createObjectFromFile(
-        renderer.device,
-        renderer.physicalDevice,
+    Object objectA = loadPointmapObjectFile(renderer.device, renderer.physicalDevice, &renderer.sceneData, (vec3){0, 0, 0}, pointFile);
+
+    fclose(pointFile);
+
+    Object objectB = createEmptyObject(
         &renderer.sceneData,
-        (vec3) { 0, 0, 0 },
-        objectFile);
-
-    fclose(objectFile);
+        (vec3){0, -8, 0},
+        1,
+        1,
+        1,
+        objectA.palette);
 
     setObjectVoxel(
         renderer.device,
         renderer.physicalDevice,
         &renderer.sceneData,
-        &object,
+        &objectB,
         (ivec3) { 1, 0, 0 },
-        0);
+        1);
 
     updateObjectVertexBuffers(
         renderer.device,
         &renderer.sceneData,
-        object);
+        objectB);
 
     recreateCommandBuffers(&renderer);
 
@@ -115,7 +119,8 @@ int main(int argc, char** argv)
         drawFrame(&renderer);
     }
 
-    cleanupObject(&renderer.sceneData, object);
+    cleanupObject(&renderer.sceneData, objectA);
+    cleanupObject(&renderer.sceneData, objectB);
     cleanupRenderer(renderer);
 
     glfwDestroyWindow(window);
