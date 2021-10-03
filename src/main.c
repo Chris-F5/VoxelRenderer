@@ -14,8 +14,8 @@
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
-const float moveSpeed = 0.05f;
-const float rotSpeed = 0.2f;
+const float moveSpeed = 0.5f;
+const float rotSpeed = 2.0f;
 
 void glfwErrorCallback(int _, const char* errorString)
 {
@@ -65,8 +65,9 @@ int main(int argc, char** argv)
 
     recreateCommandBuffers(&renderer);
 
-    glm_vec3_copy((vec3) { 0.0f, 2.0f, 10.0f }, renderer.camera.pos);
-    renderer.camera.yaw = 180;
+    glm_vec3_copy((vec3) { 85.0f, 85.0f, 85.0f }, renderer.camera.pos);
+    renderer.camera.yaw = 225;
+    renderer.camera.pitch = -20;
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();

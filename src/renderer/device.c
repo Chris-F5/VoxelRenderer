@@ -135,12 +135,12 @@ bool chooseSwapchainPresentMode(
     VkPresentModeKHR* chosenPresentMode)
 {
     for (uint32_t i = 0; i < availablePresentModeCount; i++)
-        if (availablePresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+        if (availablePresentModes[i] == VK_PRESENT_MODE_FIFO_KHR) {
             *chosenPresentMode = availablePresentModes[i];
             return true;
         }
     for (uint32_t i = 0; i < availablePresentModeCount; i++)
-        if (availablePresentModes[i] == VK_PRESENT_MODE_FIFO_KHR) {
+        if (availablePresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
             *chosenPresentMode = availablePresentModes[i];
             return true;
         }
