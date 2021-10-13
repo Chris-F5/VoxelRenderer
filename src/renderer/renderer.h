@@ -46,14 +46,18 @@ typedef struct
     VkBuffer* globalUniformBuffers;
     VkDeviceMemory* globalUniformBuffersMemory;
 
-    // PIPELINE
+    // RENDER
 
     VkCommandPool transientGraphicsCommandPool;
 
     VkCommandPool graphicsCommandPool;
     VkCommandBuffer* commandBuffers;
 
-    GraphicsPipeline graphicsPipeline;
+    VkRenderPass renderPass;
+    VkPipelineLayout mainPipelineLayout;
+    VkPipeline mainPipeline;
+    VkPipelineLayout debugLinePipelineLayout;
+    VkPipeline debugLinePipeline;
 
     VkSemaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT];
     VkSemaphore renderFinishedSemaphores[MAX_FRAMES_IN_FLIGHT];

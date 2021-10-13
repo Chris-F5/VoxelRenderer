@@ -9,7 +9,6 @@ typedef struct {
     mat4 proj;
 } GlobalUniformBuffer;
 
-
 VkDescriptorSetLayout createGlobalDescriptorSetLayout(VkDevice device);
 
 void createGlobalDescriptorSets(

@@ -11,8 +11,10 @@ void createRenderCommandBuffers(
     uint32_t count,
     VkRenderPass renderPass,
     VkExtent2D extent,
-    VkPipeline graphicsPipeline,
-    VkPipelineLayout graphicsPipelineLayout,
+    VkPipeline mainPipeline,
+    VkPipelineLayout mainPipelineLayout,
+    VkPipeline debugLinePipeline,
+    VkPipelineLayout debugLinePipelineLayout,
     const VkFramebuffer* framebuffers,
     const VkDescriptorSet* globalDescriptorSets,
     const SceneData* sceneData,
@@ -21,6 +23,8 @@ void createRenderCommandBuffers(
     allocateCommandBuffers(device, commandPool, count, commandBuffers);
 
     for (int s = 0; s < count; s++) {
+        // BEGIN COMMAND BUFFER
+
         VkCommandBufferBeginInfo beginInfo;
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.pNext = NULL;
@@ -51,14 +55,16 @@ void createRenderCommandBuffers(
 
         vkCmdBeginRenderPass(commandBuffers[s], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        vkCmdBindPipeline(commandBuffers[s], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+        // MAIN PIPELINE
 
-        VkDeviceSize vertexBufferOffsets[] = { 0 };
+        vkCmdBindPipeline(commandBuffers[s], VK_PIPELINE_BIND_POINT_GRAPHICS, mainPipeline);
+
+        VkDeviceSize mainPipelineVertexBufferOffsets[] = { 0 };
 
         vkCmdBindDescriptorSets(
             commandBuffers[s],
             VK_PIPELINE_BIND_POINT_GRAPHICS,
-            graphicsPipelineLayout,
+            mainPipelineLayout,
             0,
             1,
             &globalDescriptorSets[s],
@@ -69,17 +75,40 @@ void createRenderCommandBuffers(
             vkCmdBindDescriptorSets(
                 commandBuffers[s],
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
-                graphicsPipelineLayout,
+                mainPipelineLayout,
                 1,
                 1,
                 &sceneData->blockDescriptorSets[b],
                 0,
                 NULL);
 
-            vkCmdBindVertexBuffers(commandBuffers[s], 0, 1, &sceneData->vertexBuffers[b], vertexBufferOffsets);
+            vkCmdBindVertexBuffers(commandBuffers[s], 0, 1, &sceneData->blocksVertexBuffers[b], mainPipelineVertexBufferOffsets);
 
-            vkCmdDraw(commandBuffers[s], sceneData->vertexBuffersLength[b], 1, 0, 0);
+            vkCmdDraw(commandBuffers[s], sceneData->blocksVertexBuffersLength[b], 1, 0, 0);
         }
+
+        // DEBUG LINE PIPELINE
+        vkCmdNextSubpass(commandBuffers[s], VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdBindPipeline(commandBuffers[s], VK_PIPELINE_BIND_POINT_GRAPHICS, debugLinePipeline);
+
+        vkCmdBindDescriptorSets(
+            commandBuffers[s],
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            debugLinePipelineLayout,
+            0,
+            1,
+            &globalDescriptorSets[s],
+            0,
+            NULL);
+
+        VkDeviceSize debugLinePipelineVertexBufferOffsets[] = { 0 };
+
+        vkCmdBindVertexBuffers(commandBuffers[s], 0, 1, &sceneData->debugLineData.vertBuffer, debugLinePipelineVertexBufferOffsets);
+
+        vkCmdDraw(commandBuffers[s], sceneData->debugLineData.vertCount, 1, 0, 0);
+
+        // END COMAND BUFFER
 
         vkCmdEndRenderPass(commandBuffers[s]);
 

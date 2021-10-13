@@ -7,6 +7,8 @@
 #include <cglm/types.h>
 #include <vulkan/vulkan.h>
 
+#include "debug_line.h"
+
 extern const uint32_t VOX_BLOCK_SCALE;
 extern const uint32_t VOX_BLOCK_VOX_COUNT;
 
@@ -36,9 +38,11 @@ typedef struct {
     VkDescriptorSetLayout blocksDescriptorSetLayout;
     VkDescriptorSet* blockDescriptorSets;
 
-    VkBuffer* vertexBuffers;
-    VkDeviceMemory* vertexBuffersMemory;
-    uint32_t* vertexBuffersLength;
+    VkBuffer* blocksVertexBuffers;
+    VkDeviceMemory* blocksVertexBuffersMemory;
+    uint32_t* blocksVertexBuffersLength;
+
+    DebugLineData debugLineData;
 } SceneData;
 
 SceneData createSceneData(

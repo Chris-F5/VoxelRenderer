@@ -6,11 +6,11 @@
 
 #include "scene_data.h"
 
-extern const VkVertexInputBindingDescription VERTEX_BINDING_DESCRIPTIONS[];
-extern const size_t VERTEX_BINDING_DESCRIPTION_COUNT;
+extern const VkVertexInputBindingDescription MODEL_VERTEX_BINDING_DESCRIPTIONS[];
+extern const size_t MODEL_VERTEX_BINDING_DESCRIPTION_COUNT;
 
-extern const VkVertexInputAttributeDescription VERTEX_INPUT_ATTRIBUTE_DESCRIPTIONS[];
-extern const size_t VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_COUNT;
+extern const VkVertexInputAttributeDescription MODEL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTIONS[];
+extern const size_t MODEL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_COUNT;
 
 void createEmptyBlockVertexBuffer(
     VkDevice device,

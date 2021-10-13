@@ -9,7 +9,7 @@ DEPENDS = $(patsubst ./src/%.c, obj/%.d,$(SRCS))
 
 .PHONY: run clean all
 
-all: target/$(OUTPUTNAME) target/shader.vert.spv target/shader.frag.spv target/object.voxobj target/monu1.ply
+all: target/$(OUTPUTNAME) target/shader.vert.spv target/shader.frag.spv target/debug_line.vert.spv target/debug_line.frag.spv target/monu1.ply
 
 -include $(DEPENDS)
 

@@ -97,21 +97,40 @@ Renderer createRenderer(GLFWwindow* window)
 
     // GRAPHICS PIPELINE
 
-    VkShaderModule vertShader = createShaderModule(r.device, "shader.vert.spv");
-    VkShaderModule fragShader = createShaderModule(r.device, "shader.frag.spv");
+    VkShaderModule mainPipelineVertShader = createShaderModule(r.device, "shader.vert.spv");
+    VkShaderModule mainPipelineFragShader = createShaderModule(r.device, "shader.frag.spv");
+    VkDescriptorSetLayout mainPipelineDescriptorSetLayouts[] = { r.globalDescriptorSetLayout, r.sceneData.blocksDescriptorSetLayout };
 
-    VkDescriptorSetLayout descriptorSetLayouts[] = { r.globalDescriptorSetLayout, r.sceneData.blocksDescriptorSetLayout };
-    r.graphicsPipeline = createGraphicsPipeline(
+    VkShaderModule debugLinePipelineVertShader = createShaderModule(r.device, "debug_line.vert.spv");
+    VkShaderModule debugLinePipelineFragShader = createShaderModule(r.device, "debug_line.frag.spv");
+    VkDescriptorSetLayout debugLinePipelineDescriptorSetLayouts[] = { r.globalDescriptorSetLayout};
+
+    createGraphicsPipelines(
         r.device,
         r.physicalDeviceProperties,
         r.swapchain,
-        vertShader,
-        fragShader,
-        sizeof(descriptorSetLayouts) / sizeof(descriptorSetLayouts[0]),
-        descriptorSetLayouts);
 
-    vkDestroyShaderModule(r.device, vertShader, NULL);
-    vkDestroyShaderModule(r.device, fragShader, NULL);
+        mainPipelineVertShader,
+        mainPipelineFragShader,
+        sizeof(mainPipelineDescriptorSetLayouts) / sizeof(mainPipelineDescriptorSetLayouts[0]),
+        mainPipelineDescriptorSetLayouts,
+
+        debugLinePipelineVertShader,
+        debugLinePipelineFragShader,
+        sizeof(debugLinePipelineDescriptorSetLayouts) / sizeof(debugLinePipelineDescriptorSetLayouts[0]),
+        debugLinePipelineDescriptorSetLayouts,
+
+        &r.mainPipelineLayout,
+        &r.mainPipeline,
+        &r.debugLinePipelineLayout,
+        &r.debugLinePipeline,
+        &r.renderPass);
+
+    vkDestroyShaderModule(r.device, mainPipelineVertShader, NULL);
+    vkDestroyShaderModule(r.device, mainPipelineFragShader, NULL);
+
+    vkDestroyShaderModule(r.device, debugLinePipelineVertShader, NULL);
+    vkDestroyShaderModule(r.device, debugLinePipelineFragShader, NULL);
 
     // FRAMEBUFFERS
 
@@ -123,7 +142,7 @@ Renderer createRenderer(GLFWwindow* window)
         framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferCreateInfo.pNext = NULL;
         framebufferCreateInfo.flags = 0;
-        framebufferCreateInfo.renderPass = r.graphicsPipeline.renderPass;
+        framebufferCreateInfo.renderPass = r.renderPass;
         framebufferCreateInfo.attachmentCount = sizeof(attachments) / sizeof(attachments[0]);
         framebufferCreateInfo.pAttachments = attachments;
         framebufferCreateInfo.width = r.swapchain.extent.width;
@@ -142,10 +161,12 @@ Renderer createRenderer(GLFWwindow* window)
         r.device,
         r.graphicsCommandPool,
         r.swapchain.imageCount,
-        r.graphicsPipeline.renderPass,
+        r.renderPass,
         r.swapchain.extent,
-        r.graphicsPipeline.pipeline,
-        r.graphicsPipeline.pipelineLayout,
+        r.mainPipeline,
+        r.mainPipelineLayout,
+        r.debugLinePipeline,
+        r.debugLinePipelineLayout,
         r.framebuffers,
         r.globalDescriptorSets,
         &r.sceneData,
@@ -199,10 +220,12 @@ void recreateCommandBuffers(Renderer* r)
         r->device,
         r->graphicsCommandPool,
         r->swapchain.imageCount,
-        r->graphicsPipeline.renderPass,
+        r->renderPass,
         r->swapchain.extent,
-        r->graphicsPipeline.pipeline,
-        r->graphicsPipeline.pipelineLayout,
+        r->mainPipeline,
+        r->mainPipelineLayout,
+        r->debugLinePipeline,
+        r->debugLinePipelineLayout,
         r->framebuffers,
         r->globalDescriptorSets,
         &r->sceneData,
@@ -238,14 +261,6 @@ void drawFrame(Renderer* r)
         r->globalUniformBuffersMemory[imageIndex],
         0,
         sizeof(GlobalUniformBuffer));
-
-    //glm_mat4_identity(r->blockA.descriptorData.model);
-    //glm_rotate(r->blockA.descriptorData.model, (float)glfwGetTime() * 0.8f, (vec3) { 0.0f, 0.0f, 1.0f });
-    //glm_translate(r->blockA.descriptorData.model, (vec3) { 0.0f, 0.0f, 3.0f });
-    //updateBlockDescriptors(r->device, &r->blockA, imageIndex);
-
-    //glm_mat4_identity(r->blockB.descriptorData.model);
-    //updateBlockDescriptors(r->device, &r->blockB, imageIndex);
 
     VkSubmitInfo submitInfo;
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -313,7 +328,13 @@ void cleanupRenderer(Renderer r)
         vkDestroyFramebuffer(r.device, r.framebuffers[i], NULL);
     free(r.framebuffers);
 
-    cleanupGraphicsPipeline(r.device, r.graphicsPipeline);
+    vkDestroyPipeline(r.device, r.mainPipeline, NULL);
+    vkDestroyPipelineLayout(r.device, r.mainPipelineLayout, NULL);
+
+    vkDestroyPipeline(r.device, r.debugLinePipeline, NULL);
+    vkDestroyPipelineLayout(r.device, r.debugLinePipelineLayout, NULL);
+
+    vkDestroyRenderPass(r.device, r.renderPass, NULL);
     cleanupSwapchain(r.device, r.swapchain);
 
     vkDestroyImage(r.device, r.depthImage, NULL);

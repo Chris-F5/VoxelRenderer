@@ -10,7 +10,7 @@
 #include "../vk_utils/exceptions.h"
 #include "mesh_gen.h"
 
-const uint32_t VOX_BLOCK_SCALE = 8;
+const uint32_t VOX_BLOCK_SCALE = 32;
 const uint32_t VOX_BLOCK_VOX_COUNT = VOX_BLOCK_SCALE * VOX_BLOCK_SCALE * VOX_BLOCK_SCALE;
 
 VkDescriptorSetLayout createBlockDescriptorSetLayout(VkDevice device)
@@ -132,14 +132,21 @@ SceneData createSceneData(
         vkUpdateDescriptorSets(device, 1, &uniformBufferDescriptorWrite, 0, NULL);
     }
 
-    // VERTEX BUFFERS
+    // BLOCK VERTEX BUFFERS
 
-    sceneData.vertexBuffers = (VkBuffer*)malloc(
+    sceneData.blocksVertexBuffers = (VkBuffer*)malloc(
         maxBlockCount * sizeof(VkBuffer));
-    sceneData.vertexBuffersMemory = (VkDeviceMemory*)malloc(
+    sceneData.blocksVertexBuffersMemory = (VkDeviceMemory*)malloc(
         maxBlockCount * sizeof(VkDeviceMemory));
-    sceneData.vertexBuffersLength = (uint32_t*)malloc(
+    sceneData.blocksVertexBuffersLength = (uint32_t*)malloc(
         maxBlockCount * sizeof(uint32_t));
+
+    // DEBUG LINES
+    
+    sceneData.debugLineData = createEmptyDebugLineData(
+        device,
+        physicalDevice,
+        1024);
 
     return sceneData;
 }
@@ -224,9 +231,9 @@ BlockRef createEmptyBlock(
     createEmptyBlockVertexBuffer(
         device,
         physicalDevice,
-        &sceneData->vertexBuffersLength[blockRef],
-        &sceneData->vertexBuffers[blockRef],
-        &sceneData->vertexBuffersMemory[blockRef]);
+        &sceneData->blocksVertexBuffersLength[blockRef],
+        &sceneData->blocksVertexBuffers[blockRef],
+        &sceneData->blocksVertexBuffersMemory[blockRef]);
 
     return blockRef;
 }
@@ -262,9 +269,9 @@ BlockRef createBlockFromFile(
         device,
         blockVoxels,
         &sceneData->paletteColors[paletteRef * 256],
-        &sceneData->vertexBuffersLength[block],
-        &sceneData->vertexBuffers[block],
-        &sceneData->vertexBuffersMemory[block]);
+        &sceneData->blocksVertexBuffersLength[block],
+        &sceneData->blocksVertexBuffers[block],
+        &sceneData->blocksVertexBuffersMemory[block]);
 
     return block;
 }
@@ -286,9 +293,9 @@ void updateBlockVertexBuffer(
         device,
         getBlockVoxels(sceneData, block),
         getPalette(sceneData, palette),
-        &sceneData->vertexBuffersLength[block],
-        &sceneData->vertexBuffers[block],
-        &sceneData->vertexBuffersMemory[block]);
+        &sceneData->blocksVertexBuffersLength[block],
+        &sceneData->blocksVertexBuffers[block],
+        &sceneData->blocksVertexBuffersMemory[block]);
 }
 
 void cleanupSceneData(VkDevice device, SceneData sceneData)
@@ -305,8 +312,10 @@ void cleanupSceneData(VkDevice device, SceneData sceneData)
     free(sceneData.blockDescriptorSets);
 
     for (int i = 0; i < sceneData.allocatedBlocks; i++) {
-        vkDestroyBuffer(device, sceneData.vertexBuffers[i], NULL);
-        vkFreeMemory(device, sceneData.vertexBuffersMemory[i], NULL);
+        vkDestroyBuffer(device, sceneData.blocksVertexBuffers[i], NULL);
+        vkFreeMemory(device, sceneData.blocksVertexBuffersMemory[i], NULL);
     }
-    free(sceneData.vertexBuffersLength);
+    free(sceneData.blocksVertexBuffersLength);
+
+    cleanupDebugLineData(device, sceneData.debugLineData);
 }
