@@ -7,6 +7,7 @@
 typedef struct {
     vec3 pos;
     vec3 color;
+    vec3 normal;
 } Vertex;
 
 const VkVertexInputBindingDescription MODEL_VERTEX_BINDING_DESCRIPTIONS[] = {
@@ -17,7 +18,8 @@ const size_t MODEL_VERTEX_BINDING_DESCRIPTION_COUNT
 
 const VkVertexInputAttributeDescription MODEL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTIONS[] = {
     { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, pos) },
-    { 1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color) }
+    { 1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color) },
+    { 2, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal) }
 };
 const size_t MODEL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_COUNT
     = sizeof(MODEL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTIONS) / sizeof(MODEL_VERTEX_INPUT_ATTRIBUTE_DESCRIPTIONS[0]);
@@ -80,6 +82,7 @@ const vec3 FACE_POINTS_ZN[] = {
 void setVertex(
     const vec3 pos,
     const vec3 color,
+    const vec3 normal,
     Vertex* vertex)
 {
     vertex->pos[0] = pos[0];
@@ -88,6 +91,9 @@ void setVertex(
     vertex->color[0] = color[0];
     vertex->color[1] = color[1];
     vertex->color[2] = color[2];
+    vertex->normal[0] = normal[0];
+    vertex->normal[1] = normal[1];
+    vertex->normal[2] = normal[2];
 }
 
 void addFace(
@@ -96,6 +102,7 @@ void addFace(
     int z,
     const vec3* facePoints,
     const vec3 color,
+    const vec3 normal,
     uint32_t* vertexCount,
     Vertex* vertices)
 {
@@ -103,7 +110,7 @@ void addFace(
         vec3 pos;
         vec3 point = { facePoints[i][0], facePoints[i][1], facePoints[i][2] };
         glm_vec3_add(point, (vec3) { x, y, z }, pos);
-        setVertex(pos, color, &vertices[*vertexCount]);
+        setVertex(pos, color, normal, &vertices[*vertexCount]);
         *vertexCount += 1;
     }
 }
@@ -145,17 +152,53 @@ void createBlockMesh(
             int z = i / (VOX_BLOCK_SCALE * VOX_BLOCK_SCALE);
 
             if (!isVoxelPresent(x + 1, y + 0, z + 0, voxels))
-                addFace(x, y, z, FACE_POINTS_XP, color, vertexCount, vertices);
+                addFace(
+                    x, y, z,
+                    FACE_POINTS_XP,
+                    color,
+                    (vec3) {1.0f, 0.0f, 0.0f},
+                    vertexCount,
+                    vertices);
             if (!isVoxelPresent(x - 1, y + 0, z + 0, voxels))
-                addFace(x, y, z, FACE_POINTS_XN, color, vertexCount, vertices);
+                addFace(
+                    x, y, z,
+                    FACE_POINTS_XN,
+                    color,
+                    (vec3) {-1.0f, 0.0f, 0.0f},
+                    vertexCount,
+                    vertices);
             if (!isVoxelPresent(x + 0, y + 1, z + 0, voxels))
-                addFace(x, y, z, FACE_POINTS_YP, color, vertexCount, vertices);
+                addFace(
+                    x, y, z,
+                    FACE_POINTS_YP,
+                    color,
+                    (vec3) {0.0f, 1.0f, 0.0f},
+                    vertexCount,
+                    vertices);
             if (!isVoxelPresent(x + 0, y - 1, z + 0, voxels))
-                addFace(x, y, z, FACE_POINTS_YN, color, vertexCount, vertices);
+                addFace(
+                    x, y, z,
+                    FACE_POINTS_YN,
+                    color,
+                    (vec3) {0.0f, -1.0f, 0.0f},
+                    vertexCount,
+                    vertices);
             if (!isVoxelPresent(x + 0, y + 0, z + 1, voxels))
-                addFace(x, y, z, FACE_POINTS_ZP, color, vertexCount, vertices);
+                addFace(
+                    x, y, z,
+                    FACE_POINTS_ZP,
+                    color,
+                    (vec3) {0.0f, 0.0f, 1.0f},
+                    vertexCount,
+                    vertices);
             if (!isVoxelPresent(x + 0, y + 0, z - 1, voxels))
-                addFace(x, y, z, FACE_POINTS_ZN, color, vertexCount, vertices);
+                addFace(
+                    x, y, z,
+                    FACE_POINTS_ZN,
+                    color,
+                    (vec3) {0.0f, 0.0f, -1.0f},
+                    vertexCount,
+                    vertices);
         }
 }
 
