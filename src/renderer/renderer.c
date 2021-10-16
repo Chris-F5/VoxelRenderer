@@ -97,8 +97,8 @@ Renderer createRenderer(GLFWwindow* window)
 
     // GRAPHICS PIPELINE
 
-    VkShaderModule mainPipelineVertShader = createShaderModule(r.device, "shader.vert.spv");
-    VkShaderModule mainPipelineFragShader = createShaderModule(r.device, "shader.frag.spv");
+    VkShaderModule mainPipelineVertShader = createShaderModule(r.device, "vox_tri.vert.spv");
+    VkShaderModule mainPipelineFragShader = createShaderModule(r.device, "vox_tri.frag.spv");
     VkDescriptorSetLayout mainPipelineDescriptorSetLayouts[] = { r.globalDescriptorSetLayout, r.sceneData.blocksDescriptorSetLayout };
 
     VkShaderModule debugLinePipelineVertShader = createShaderModule(r.device, "debug_line.vert.spv");

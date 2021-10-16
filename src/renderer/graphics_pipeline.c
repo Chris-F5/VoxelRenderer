@@ -113,8 +113,9 @@ void createGraphicsPipelines(
         VkSubpassDependency mainSubpassDependency;
         mainSubpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
         mainSubpassDependency.dstSubpass = 0;
-        mainSubpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        mainSubpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        mainSubpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        mainSubpassDependency.dstStageMask = 
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         mainSubpassDependency.srcAccessMask = 0;
         mainSubpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
         mainSubpassDependency.dependencyFlags = 0;
@@ -122,13 +123,15 @@ void createGraphicsPipelines(
         VkSubpassDependency debugLineSubpassDependency;
         debugLineSubpassDependency.srcSubpass = 0;
         debugLineSubpassDependency.dstSubpass = 1;
-        debugLineSubpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        debugLineSubpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        debugLineSubpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        debugLineSubpassDependency.dstStageMask = 
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         debugLineSubpassDependency.srcAccessMask = 0;
         debugLineSubpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
         debugLineSubpassDependency.dependencyFlags = 0;
 
         // RENDER PASS
+        
         VkAttachmentDescription attachments[] = { colorAttachment, depthAttachment };
         VkSubpassDescription subpasses[] = { mainSubpass, debugLineSubpass };
         VkSubpassDependency subpassDependencies[] = { mainSubpassDependency, debugLineSubpassDependency };
