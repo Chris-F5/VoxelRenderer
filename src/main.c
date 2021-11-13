@@ -1,23 +1,23 @@
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#define GLFW_INCLUDE_VULKAN
+#include <vulkan/vulkan.h>
+
 #include <GLFW/glfw3.h>
+
 #include <cglm/cglm.h>
 
-#include "object.h"
-#include "pointmap_object_loader.h"
-#include "renderer/renderer.h"
-#include "renderer/scene_data/debug_line.h"
-#include "renderer/scene_data/scene_data.h"
-#include "renderer/vk_utils/buffer.h"
+#include "./renderer.h"
+
+#include "./models.h"
+#include "./utils.h"
+#include "./vert_gen.h"
+#include "./vox_blocks.h"
+#include "./vox_object.h"
+#include "./vulkan_device.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
-
-const float moveSpeed = 0.5f;
-const float rotSpeed = 2.0f;
 
 void glfwErrorCallback(int _, const char* errorString)
 {
@@ -25,139 +25,34 @@ void glfwErrorCallback(int _, const char* errorString)
     exit(EXIT_FAILURE);
 }
 
-void write24CubeDebugLinePoints(DebugLineVertex* points, vec3 pos, vec3 size, vec3 color)
+static VkExtent2D choosePresentExtent(
+    GLFWwindow* window,
+    VkSurfaceCapabilitiesKHR surfaceCapabilities)
 {
-    points[0] = (DebugLineVertex) {
-        { pos[0], pos[1], pos[2] },
-        { color[0], color[1], color[2] }
-    };
-    points[1] = (DebugLineVertex) {
-        { pos[0] + size[0], pos[1], pos[2] },
-        { color[0], color[1], color[2] }
-    };
+    if (surfaceCapabilities.currentExtent.width != UINT32_MAX) {
+        return surfaceCapabilities.currentExtent;
+    } else {
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
 
-    points[2] = (DebugLineVertex) {
-        { pos[0] + size[0], pos[1], pos[2] },
-        { color[0], color[1], color[2] }
-    };
-    points[3] = (DebugLineVertex) {
-        { pos[0] + size[0], pos[1] + size[1], pos[2] },
-        { color[0], color[1], color[2] }
-    };
+        VkExtent2D extent;
 
-    points[4] = (DebugLineVertex) {
-        { pos[0] + size[0], pos[1] + size[1], pos[2] },
-        { color[0], color[1], color[2] }
-    };
-    points[5] = (DebugLineVertex) {
-        { pos[0], pos[1] + size[1], pos[2] },
-        { color[0], color[1], color[2] }
-    };
+        extent.width = min(
+            surfaceCapabilities.maxImageExtent.width,
+            max(
+                width,
+                surfaceCapabilities.maxImageExtent.width));
+        extent.height = min(
+            surfaceCapabilities.maxImageExtent.height,
+            max(
+                height,
+                surfaceCapabilities.maxImageExtent.height));
 
-    points[6] = (DebugLineVertex) {
-        { pos[0], pos[1] + size[1], pos[2] },
-        { color[0], color[1], color[2] }
-    };
-    points[7] = (DebugLineVertex) {
-        { pos[0], pos[1], pos[2] },
-        { color[0], color[1], color[2] }
-    };
-
-    points[8] = (DebugLineVertex) {
-        { pos[0], pos[1], pos[2] + size[2] },
-        { color[0], color[1], color[2] }
-    };
-    points[9] = (DebugLineVertex) {
-        { pos[0] + size[0], pos[1], pos[2] + size[2] },
-        { color[0], color[1], color[2] }
-    };
-
-    points[10] = (DebugLineVertex) {
-        { pos[0] + size[0], pos[1], pos[2] + size[2] },
-        { color[0], color[1], color[2] }
-    };
-    points[11] = (DebugLineVertex) {
-        { pos[0] + size[0], pos[1] + size[1], pos[2] + size[2] },
-        { color[0], color[1], color[2] }
-    };
-
-    points[12] = (DebugLineVertex) {
-        { pos[0] + size[0], pos[1] + size[1], pos[2] + size[2] },
-        { color[0], color[1], color[2] }
-    };
-    points[13] = (DebugLineVertex) {
-        { pos[0], pos[1] + size[1], pos[2] + size[2] },
-        { color[0], color[1], color[2] }
-    };
-
-    points[14] = (DebugLineVertex) {
-        { pos[0], pos[1] + size[1], pos[2] + size[2] },
-        { color[0], color[1], color[2] }
-    };
-    points[15] = (DebugLineVertex) {
-        { pos[0], pos[1], pos[2] + size[2] },
-        { color[0], color[1], color[2] }
-    };
-
-
-    points[16] = (DebugLineVertex) {
-        { pos[0], pos[1], pos[2] },
-        { color[0], color[1], color[2] }
-    };
-    points[17] = (DebugLineVertex) {
-        { pos[0], pos[1], pos[2] + size[2] },
-        { color[0], color[1], color[2] }
-    };
-    
-    points[18] = (DebugLineVertex) {
-        { pos[0] + size[0], pos[1], pos[2] },
-        { color[0], color[1], color[2] }
-    };
-    points[19] = (DebugLineVertex) {
-        { pos[0] + size[0], pos[1], pos[2] + size[2] },
-        { color[0], color[1], color[2] }
-    };
-
-    points[20] = (DebugLineVertex) {
-        { pos[0] + size[0], pos[1] + size[1], pos[2] },
-        { color[0], color[1], color[2] }
-    };
-    points[21] = (DebugLineVertex) {
-        { pos[0] + size[0], pos[1] + size[1], pos[2] + size[2] },
-        { color[0], color[1], color[2] }
-    };
-
-    points[22] = (DebugLineVertex) {
-        { pos[0], pos[1] + size[1], pos[2] },
-        { color[0], color[1], color[2] }
-    };
-    points[23] = (DebugLineVertex) {
-        { pos[0], pos[1] + size[1], pos[2] + size[2] },
-        { color[0], color[1], color[2] }
-    };
+        return extent;
+    }
 }
 
-void updateDebugLinesForObject(VkDevice device, VkPhysicalDevice physicalDevice, Object* object, DebugLineData* debugLineData)
-{
-    uint32_t pointCount = 24;
-    DebugLineVertex* points = (DebugLineVertex*)
-        malloc(pointCount * sizeof(DebugLineVertex));
-
-    write24CubeDebugLinePoints(
-        points,
-        object->pos,
-        (vec3){object->width * VOX_BLOCK_SCALE, object->height * VOX_BLOCK_SCALE, object->depth * VOX_BLOCK_SCALE},
-        (vec3){1.0f, 0.0f, 0.0f});
-
-   updateDebugLineData(
-       device,
-       physicalDevice,
-       pointCount,
-       points,
-       debugLineData);
-}
-
-int main(int argc, char** argv)
+int main()
 {
     glfwSetErrorCallback(glfwErrorCallback);
     glfwInit();
@@ -166,105 +61,109 @@ int main(int argc, char** argv)
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan App", NULL, NULL);
 
-    Renderer renderer = createRenderer(window);
+    VulkanDevice device;
+    VulkanDevice_init(&device, window);
 
-    FILE* pointFile;
+    VkExtent2D extent = choosePresentExtent(window, device.physicalProperties.surfaceCapabilities);
 
-    pointFile = fopen("monu1.ply", "rb");
+    Renderer renderer;
+    Renderer_init(&renderer, &device, extent);
 
-    Object objectA = loadPointmapObjectFile(renderer.device, renderer.physicalDevice, &renderer.sceneData, (vec3) { 0, 0, 0 }, pointFile);
+    /* VOXELS */
+    VoxBlockStorage blockStorage;
+    VoxPaletteStorage paletteStorage;
+    {
+        VoxBlockStorage_init(&blockStorage);
 
-    fclose(pointFile);
+        VoxPaletteStorage_init(&paletteStorage);
+        VoxPaletteRef palette = VoxPaletteStorage_add(&paletteStorage);
 
-    Object objectB = createEmptyObject(
-        &renderer.sceneData,
-        (vec3) { 0, -8, 0 },
-        1,
-        1,
-        1,
-        objectA.palette);
+        vec3* paletteColorData;
+        paletteColorData = VoxPaletteStorage_getColorData(&paletteStorage, palette);
+        paletteColorData[1][1] = 1.0f;
 
-    setObjectVoxel(
-        renderer.device,
-        renderer.physicalDevice,
-        &renderer.sceneData,
-        &objectB,
-        (ivec3) { 1, 0, 0 },
-        2);
+        VoxObject object;
+        VoxObject_init(
+            &object,
+            &blockStorage,
+            (vec3) { 0.0f, 0.0f, 0.0f },
+            1,
+            1,
+            1,
+            palette);
 
-    updateObjectVertexBuffers(
-        renderer.device,
-        &renderer.sceneData,
-        objectB);
+        VoxObject_setVoxel(
+            &object,
+            &blockStorage,
+            (ivec3) { 0, 0, 0 },
+            1);
 
-    updateDebugLinesForObject(
-        renderer.device,
-        renderer.physicalDevice,
-        &objectA,
-        &renderer.sceneData.debugLineData);
+        VoxBlockRef block;
+        if (!VoxObject_getBlock(
+                &object,
+                0, 0, 0,
+                &block)) {
+            puts("block doesd not exist. exiting");
+            exit(EXIT_FAILURE);
+        }
 
-    recreateCommandBuffers(&renderer);
+        ModelRef model = ModelStorage_add(
+            &renderer.modelStorage,
+            device.logical,
+            1000);
 
-    glm_vec3_copy((vec3) { 85.0f, 85.0f, 85.0f }, renderer.camera.pos);
-    renderer.camera.yaw = 225;
-    renderer.camera.pitch = -20;
+        unsigned char* blockColorData;
+        blockColorData = VoxBlockStorage_getColorData(&blockStorage, block);
 
+        generateVoxBlockVertices(
+            device.logical,
+            paletteColorData,
+            blockColorData,
+            &renderer.modelStorage,
+            model);
+        ModelUniformData uniformData;
+        glm_mat4_identity(uniformData.model);
+        ModelStorage_updateUniformData(
+            &renderer.modelStorage,
+            device.logical,
+            model,
+            uniformData);
+
+        Renderer_recreateCommandBuffers(&renderer, &device);
+    }
+
+    /* CAMERA */
+    vec3 camPos;
+    CameraRenderData cameraData;
+    {
+        float aspectRatio = (float)renderer.presentExtent.width / (float)renderer.presentExtent.height;
+        camPos[0] = 5.0f;
+        camPos[1] = 5.0f;
+        camPos[2] = 5.0f;
+
+        glm_lookat(
+            camPos,
+            (vec3) { 0.0f, 0.0f, 0.0f }, /* look at */
+            (vec3) { 0.0f, 1.0f, 0.0f }, /* up vector */
+            cameraData.view);
+        glm_perspective(
+            glm_rad(90.0f), /* fov */
+            aspectRatio,
+            0.1, /* near clip */
+            100, /* far clip */
+            cameraData.proj);
+        cameraData.proj[1][1] *= -1;
+    }
+
+    /* MAIN LOOP */
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
-        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-            renderer.camera.yaw -= rotSpeed;
-        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-            renderer.camera.yaw += rotSpeed;
-        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-            renderer.camera.pitch += rotSpeed;
-        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-            renderer.camera.pitch -= rotSpeed;
-        if (renderer.camera.pitch > 89.9f)
-            renderer.camera.pitch = 89.9f;
-        if (renderer.camera.pitch < -89.9f)
-            renderer.camera.pitch = -89.9f;
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            vec3 forward;
-            getCameraForward(renderer.camera, forward);
-            forward[1] = 0;
-            glm_normalize(forward);
-            glm_vec3_scale(forward, moveSpeed, forward);
-            glm_vec3_add(renderer.camera.pos, forward, renderer.camera.pos);
-        }
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            vec3 forward;
-            getCameraForward(renderer.camera, forward);
-            forward[1] = 0;
-            glm_normalize(forward);
-            glm_vec3_scale(forward, -moveSpeed, forward);
-            glm_vec3_add(renderer.camera.pos, forward, renderer.camera.pos);
-        }
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            vec3 right;
-            getCameraRight(renderer.camera, right);
-            glm_vec3_scale(right, moveSpeed, right);
-            glm_vec3_add(renderer.camera.pos, right, renderer.camera.pos);
-        }
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            vec3 right;
-            getCameraRight(renderer.camera, right);
-            glm_vec3_scale(right, -moveSpeed, right);
-            glm_vec3_add(renderer.camera.pos, right, renderer.camera.pos);
-        }
-        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-            renderer.camera.pos[1] += moveSpeed;
-        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-            renderer.camera.pos[1] -= moveSpeed;
-
-        drawFrame(&renderer);
+        Renderer_drawFrame(&renderer, &device, cameraData);
     }
+    vkDeviceWaitIdle(device.logical);
 
-    cleanupObject(&renderer.sceneData, objectA);
-    cleanupObject(&renderer.sceneData, objectB);
-    cleanupRenderer(renderer);
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
-    return 0;
+    VoxBlockStorage_destroy(&blockStorage);
+    VoxPaletteStorage_destroy(&paletteStorage);
+    Renderer_destroy(&renderer, device.logical);
 }
