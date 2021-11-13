@@ -10,6 +10,7 @@
 #include "./renderer.h"
 
 #include "./models.h"
+#include "./pointmap_object_loader.h"
 #include "./utils.h"
 #include "./vert_gen.h"
 #include "./vox_blocks.h"
@@ -74,60 +75,38 @@ int main()
     VoxPaletteStorage paletteStorage;
     {
         VoxBlockStorage_init(&blockStorage);
-
         VoxPaletteStorage_init(&paletteStorage);
-        VoxPaletteRef palette = VoxPaletteStorage_add(&paletteStorage);
 
-        vec3* paletteColorData;
-        paletteColorData = VoxPaletteStorage_getColorData(&paletteStorage, palette);
-        paletteColorData[1][1] = 1.0f;
+        FILE* pointmapFile = fopen("monu1.ply", "r");
 
         VoxObject object;
-        VoxObject_init(
-            &object,
+        loadVoxObjectFromPointmapFile(
+            device.logical,
             &blockStorage,
+            &paletteStorage,
+            &renderer.modelStorage,
             (vec3) { 0.0f, 0.0f, 0.0f },
-            1,
-            1,
-            1,
-            palette);
+            pointmapFile,
+            &object);
 
-        VoxObject_setVoxel(
-            &object,
-            &blockStorage,
-            (ivec3) { 0, 0, 0 },
-            1);
-
-        VoxBlockRef block;
-        if (!VoxObject_getBlock(
-                &object,
-                0, 0, 0,
-                &block)) {
-            puts("block doesd not exist. exiting");
-            exit(EXIT_FAILURE);
-        }
-
-        ModelRef model = ModelStorage_add(
-            &renderer.modelStorage,
-            device.logical,
-            1000);
-
-        unsigned char* blockColorData;
-        blockColorData = VoxBlockStorage_getColorData(&blockStorage, block);
-
-        generateVoxBlockVertices(
-            device.logical,
-            paletteColorData,
-            blockColorData,
-            &renderer.modelStorage,
-            model);
-        ModelUniformData uniformData;
-        glm_mat4_identity(uniformData.model);
-        ModelStorage_updateUniformData(
-            &renderer.modelStorage,
-            device.logical,
-            model,
-            uniformData);
+        for (int b = 0; b < object.width * object.height * object.depth; b++)
+            if (object.blockMask[b]) {
+                int x = b % object.width;
+                int y = b / object.width % object.height;
+                int z = b / (object.width * object.height);
+                updateVoxBlockModel(
+                    device.logical,
+                    &blockStorage,
+                    &paletteStorage,
+                    &renderer.modelStorage,
+                    object.blocks[b],
+                    object.palette,
+                    object.models[b],
+                    (vec3) {
+                        (float)(x * VOX_BLOCK_SCALE),
+                        (float)(y * VOX_BLOCK_SCALE),
+                        (float)(z * VOX_BLOCK_SCALE) });
+            }
 
         Renderer_recreateCommandBuffers(&renderer, &device);
     }
@@ -137,9 +116,9 @@ int main()
     CameraRenderData cameraData;
     {
         float aspectRatio = (float)renderer.presentExtent.width / (float)renderer.presentExtent.height;
-        camPos[0] = 5.0f;
-        camPos[1] = 5.0f;
-        camPos[2] = 5.0f;
+        camPos[0] = 100.0f;
+        camPos[1] = 100.0f;
+        camPos[2] = 100.0f;
 
         glm_lookat(
             camPos,
@@ -149,8 +128,8 @@ int main()
         glm_perspective(
             glm_rad(90.0f), /* fov */
             aspectRatio,
-            0.1, /* near clip */
-            100, /* far clip */
+            0.1,  /* near clip */
+            1000, /* far clip */
             cameraData.proj);
         cameraData.proj[1][1] *= -1;
     }

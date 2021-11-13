@@ -8,7 +8,7 @@
 #include "vk_utils/exceptions.h"
 
 static const uint32_t MODEL_CAPACITY = 100;
-static const uint32_t TOTAL_VERTEX_CAPACITY = 100000;
+static const uint32_t TOTAL_VERTEX_CAPACITY = 1000000;
 
 const VkVertexInputBindingDescription MODEL_VERTEX_BINDING_DESCRIPTIONS[] = {
     { 0, sizeof(ModelVertex), VK_VERTEX_INPUT_RATE_VERTEX }

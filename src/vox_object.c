@@ -23,6 +23,8 @@ void VoxObject_init(
     object->palette = palette;
     object->blocks = (VoxBlockRef*)malloc(
         width * height * depth * sizeof(VoxBlockRef));
+    object->models = (ModelRef*)malloc(
+        width * height * depth * sizeof(ModelRef));
     object->blockMask = (bool*)malloc(
         width * height * depth * sizeof(bool));
     memset(object->blockMask, 0, width * height * depth * sizeof(bool));
@@ -30,7 +32,9 @@ void VoxObject_init(
 
 void VoxObject_setVoxel(
     VoxObject* object,
+    VkDevice logicalDevice,
     VoxBlockStorage* blockStorage,
+    ModelStorage* modelStorage,
     ivec3 pos,
     unsigned char voxColor)
 {
@@ -70,6 +74,10 @@ void VoxObject_setVoxel(
         blockWorldPos[2] = blockPos[2] * VOX_BLOCK_SCALE + object->pos[2];
         object->blockMask[blockId] = true;
         object->blocks[blockId] = VoxBlockStorage_add(blockStorage);
+        object->models[blockId] = ModelStorage_add(
+            modelStorage,
+            logicalDevice,
+            50000);
     }
     VoxBlockStorage_getColorData(
         blockStorage,

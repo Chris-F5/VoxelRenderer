@@ -3,6 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cglm/cglm.h>
+
+#include "./vert_gen.h"
+
 const int VOX_BLOCK_SCALE = 32;
 const int VOX_BLOCK_VOX_COUNT = VOX_BLOCK_SCALE * VOX_BLOCK_SCALE * VOX_BLOCK_SCALE;
 
@@ -67,4 +71,37 @@ void VoxBlockStorage_destroy(VoxBlockStorage* storage)
 {
     IdAllocator_destroy(&storage->idAllocator);
     free(storage->colors);
+}
+
+void updateVoxBlockModel(
+    VkDevice logicalDevice,
+    VoxBlockStorage* blockStorage,
+    VoxPaletteStorage* paletteStorage,
+    ModelStorage* modelStorage,
+    VoxBlockRef block,
+    VoxPaletteRef palette,
+    ModelRef model,
+    vec3 worldPos)
+{
+        unsigned char* blockColorData;
+        blockColorData = VoxBlockStorage_getColorData(blockStorage, block);
+
+        vec3* paletteColorData;
+        paletteColorData = VoxPaletteStorage_getColorData(paletteStorage, palette);
+
+        generateVoxBlockVertices(
+            logicalDevice,
+            paletteColorData,
+            blockColorData,
+            modelStorage,
+            model);
+        ModelUniformData uniformData;
+        
+        glm_mat4_identity(uniformData.model);
+        glm_translate(uniformData.model, worldPos);
+        ModelStorage_updateUniformData(
+            modelStorage,
+            logicalDevice,
+            model,
+            uniformData);
 }

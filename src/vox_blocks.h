@@ -5,7 +5,8 @@
 
 #include <cglm/types.h>
 
-#include "id_allocator.h"
+#include "./id_allocator.h"
+#include "./models.h"
 
 extern const int VOX_BLOCK_SCALE;
 extern const int VOX_BLOCK_VOX_COUNT;
@@ -34,5 +35,15 @@ VoxBlockRef VoxBlockStorage_add(VoxBlockStorage* storage);
 unsigned char* VoxBlockStorage_getColorData(VoxBlockStorage* storage, VoxBlockRef id);
 void VoxBlockStorage_remove(VoxBlockStorage* storage, VoxBlockRef id);
 void VoxBlockStorage_destroy(VoxBlockStorage* storage);
+
+void updateVoxBlockModel(
+    VkDevice logicalDevice,
+    VoxBlockStorage* blockStorage,
+    VoxPaletteStorage* paletteStorage,
+    ModelStorage* modelStorage,
+    VoxBlockRef block,
+    VoxPaletteRef palette,
+    ModelRef model,
+    vec3 worldPos);
 
 #endif

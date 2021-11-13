@@ -16,6 +16,7 @@ typedef struct {
     uint32_t depth;
     VoxPaletteRef palette;
     VoxBlockRef* blocks;
+    ModelRef* models;
     bool* blockMask;
 } VoxObject;
 
@@ -30,7 +31,9 @@ void VoxObject_init(
 
 void VoxObject_setVoxel(
     VoxObject* object,
+    VkDevice logicalDevice,
     VoxBlockStorage* blockStorage,
+    ModelStorage* modelStorage,
     ivec3 pos,
     unsigned char voxColor);
 
