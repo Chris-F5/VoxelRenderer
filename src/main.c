@@ -8,7 +8,7 @@
 #include <cglm/cglm.h>
 
 #include "./renderer.h"
-
+#include "./camera.h"
 #include "./models.h"
 #include "./pointmap_object_loader.h"
 #include "./utils.h"
@@ -112,33 +112,26 @@ int main()
     }
 
     /* CAMERA */
-    vec3 camPos;
-    CameraRenderData cameraData;
+    Camera camera;
     {
         float aspectRatio = (float)renderer.presentExtent.width / (float)renderer.presentExtent.height;
-        camPos[0] = 100.0f;
-        camPos[1] = 100.0f;
-        camPos[2] = 100.0f;
-
-        glm_lookat(
-            camPos,
-            (vec3) { 0.0f, 0.0f, 0.0f }, /* look at */
-            (vec3) { 0.0f, 1.0f, 0.0f }, /* up vector */
-            cameraData.view);
-        glm_perspective(
-            glm_rad(90.0f), /* fov */
-            aspectRatio,
-            0.1,  /* near clip */
-            1000, /* far clip */
-            cameraData.proj);
-        cameraData.proj[1][1] *= -1;
+        Camera_init(&camera, aspectRatio);
+        camera.pos[0] = 100.0f;
+        camera.pos[1] = 100.0f;
+        camera.pos[2] = 100.0f;
+        camera.yaw = 225;
+        camera.pitch = -20;
     }
 
     /* MAIN LOOP */
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+        Camera_userInput(&camera, window);
 
-        Renderer_drawFrame(&renderer, &device, cameraData);
+        CameraRenderData camData;
+        Camera_viewMat(&camera, camData.view);
+        Camera_projMat(&camera, camData.proj);
+        Renderer_drawFrame(&renderer, &device, camData);
     }
     vkDeviceWaitIdle(device.logical);
 
