@@ -4,14 +4,22 @@
 #include <vulkan/vulkan.h>
 
 #include "./models.h"
+#include "./chunks.h"
 
-#define MAX_CHUNK_VERT_COUNT (CHUNK_VOX_COUNT * 18)
+typedef struct {
+    uint32_t vertCount;
+    ModelVertex* vertBuffer;
+} ChunkVertGen;
 
-void generateChunkVertices(
-    VkDevice logicalDevice,
-    const vec3* colorPalette,
-    const unsigned char* chunkColors,
-    ModelStorage* modelStorage,
-    ModelRef targetModel);
+void ChunkVertGet_init(ChunkVertGen* vertGen);
+
+void ChunkVertGen_generate(
+    ChunkVertGen* vertGen,
+    ChunkStorage* chunkStorage,
+    ChunkRef chunk,
+    VoxPaletteStorage* paletteStorage,
+    VoxPaletteRef palette);
+
+void ChunkVertGen_destroy(ChunkVertGen* vertGen);
 
 #endif

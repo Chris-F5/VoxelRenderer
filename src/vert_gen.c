@@ -1,11 +1,11 @@
 #include "./vert_gen.h"
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <cglm/vec3.h>
 
-#include "chunks.h"
+#define MAX_CHUNK_VERT_COUNT (CHUNK_VOX_COUNT * 18)
 
 const vec3 FACE_POINTS_XP[] = {
     { 1, 0, 0 },
@@ -87,16 +87,24 @@ static inline uint32_t xyzToChunkIndex(int x, int y, int z)
     return x + y * CHUNK_SCALE + z * CHUNK_SCALE * CHUNK_SCALE;
 }
 
-void generateChunkVertices(
-    VkDevice logicalDevice,
-    const vec3* colorPalette,
-    const unsigned char* chunkColors,
-    ModelStorage* modelStorage,
-    ModelRef targetModel)
+void ChunkVertGet_init(ChunkVertGen* vertGen)
 {
-    uint32_t vertCount = 0;
-    ModelVertex* verts
+    vertGen->vertCount = 0;
+    vertGen->vertBuffer
         = (ModelVertex*)malloc(MAX_CHUNK_VERT_COUNT * sizeof(ModelVertex));
+}
+
+void ChunkVertGen_generate(
+    ChunkVertGen* vertGen,
+    ChunkStorage* chunkStorage,
+    ChunkRef chunk,
+    VoxPaletteStorage* paletteStorage,
+    VoxPaletteRef palette)
+{
+    uint8_t* chunkColors = ChunkStorage_chunkColorData(chunkStorage, chunk);
+    vec3* colorPalette = VoxPaletteStorage_getColorData(paletteStorage, palette);
+
+    vertGen->vertCount = 0;
     for (int i = 0; i < CHUNK_VOX_COUNT; i++)
         if (chunkColors[i] != 0) {
             int x = i % CHUNK_SCALE;
@@ -115,8 +123,9 @@ void generateChunkVertices(
                     color,
                     sizeof(FACE_POINTS_XN) / sizeof(FACE_POINTS_XN[0]),
                     FACE_POINTS_XN,
-                    &verts[vertCount]);
-                vertCount += sizeof(FACE_POINTS_XN) / sizeof(FACE_POINTS_XN[0]);
+                    &vertGen->vertBuffer[vertGen->vertCount]);
+                vertGen->vertCount
+                    += sizeof(FACE_POINTS_XN) / sizeof(FACE_POINTS_XN[0]);
             }
             if (x == CHUNK_SCALE - 1
                 || chunkColors[xyzToChunkIndex(x + 1, y, z)] == 0) {
@@ -125,8 +134,9 @@ void generateChunkVertices(
                     color,
                     sizeof(FACE_POINTS_XP) / sizeof(FACE_POINTS_XP[0]),
                     FACE_POINTS_XP,
-                    &verts[vertCount]);
-                vertCount += sizeof(FACE_POINTS_XP) / sizeof(FACE_POINTS_XP[0]);
+                    &vertGen->vertBuffer[vertGen->vertCount]);
+                vertGen->vertCount
+                    += sizeof(FACE_POINTS_XP) / sizeof(FACE_POINTS_XP[0]);
             }
 
             if (y == 0
@@ -136,8 +146,9 @@ void generateChunkVertices(
                     color,
                     sizeof(FACE_POINTS_YN) / sizeof(FACE_POINTS_YN[0]),
                     FACE_POINTS_YN,
-                    &verts[vertCount]);
-                vertCount += sizeof(FACE_POINTS_YN) / sizeof(FACE_POINTS_YN[0]);
+                    &vertGen->vertBuffer[vertGen->vertCount]);
+                vertGen->vertCount
+                    += sizeof(FACE_POINTS_YN) / sizeof(FACE_POINTS_YN[0]);
             }
             if (y == CHUNK_SCALE - 1
                 || chunkColors[xyzToChunkIndex(x, y + 1, z)] == 0) {
@@ -146,8 +157,9 @@ void generateChunkVertices(
                     color,
                     sizeof(FACE_POINTS_YP) / sizeof(FACE_POINTS_YP[0]),
                     FACE_POINTS_YP,
-                    &verts[vertCount]);
-                vertCount += sizeof(FACE_POINTS_YP) / sizeof(FACE_POINTS_YP[0]);
+                    &vertGen->vertBuffer[vertGen->vertCount]);
+                vertGen->vertCount
+                    += sizeof(FACE_POINTS_YP) / sizeof(FACE_POINTS_YP[0]);
             }
 
             if (z == 0
@@ -157,8 +169,9 @@ void generateChunkVertices(
                     color,
                     sizeof(FACE_POINTS_ZN) / sizeof(FACE_POINTS_ZN[0]),
                     FACE_POINTS_ZN,
-                    &verts[vertCount]);
-                vertCount += sizeof(FACE_POINTS_ZN) / sizeof(FACE_POINTS_ZN[0]);
+                    &vertGen->vertBuffer[vertGen->vertCount]);
+                vertGen->vertCount
+                    += sizeof(FACE_POINTS_ZN) / sizeof(FACE_POINTS_ZN[0]);
             }
             if (z == CHUNK_SCALE - 1
                 || chunkColors[xyzToChunkIndex(x, y, z + 1)] == 0) {
@@ -167,16 +180,14 @@ void generateChunkVertices(
                     color,
                     sizeof(FACE_POINTS_ZP) / sizeof(FACE_POINTS_ZP[0]),
                     FACE_POINTS_ZP,
-                    &verts[vertCount]);
-                vertCount += sizeof(FACE_POINTS_ZP) / sizeof(FACE_POINTS_ZP[0]);
+                    &vertGen->vertBuffer[vertGen->vertCount]);
+                vertGen->vertCount
+                    += sizeof(FACE_POINTS_ZP) / sizeof(FACE_POINTS_ZP[0]);
             }
         }
+}
 
-    ModelStorage_updateVertexData(
-        modelStorage,
-        logicalDevice,
-        targetModel,
-        vertCount,
-        verts);
-    free(verts);
+void ChunkVertGen_destroy(ChunkVertGen* vertGen)
+{
+    free(vertGen->vertBuffer);
 }

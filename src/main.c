@@ -108,12 +108,28 @@ int main()
         */
 
         ChunkRef chunk;
+        ChunkVertGen vertGen;
+        ChunkVertGet_init(&vertGen);
         if (IdAllocator_first(&chunkStorage.idAllocator, &chunk)) {
             do {
+                ChunkVertGen_generate(
+                    &vertGen,
+                    &chunkStorage,
+                    chunk,
+                    &paletteStorage,
+                    chunkPalette);
+
                 ModelRef model = ModelStorage_add(
                     &renderer.modelStorage,
                     device.logical,
-                    MAX_CHUNK_VERT_COUNT);
+                    vertGen.vertCount);
+
+                ModelStorage_updateVertexData(
+                    &renderer.modelStorage,
+                    device.logical,
+                    model,
+                    vertGen.vertCount,
+                    vertGen.vertBuffer);
 
                 vec3 worldPos;
                 worldPos[0] = chunkStorage.positions[chunk][0] * CHUNK_SCALE;
@@ -128,13 +144,6 @@ int main()
                     device.logical,
                     model,
                     modelData);
-
-                generateChunkVertices(
-                    device.logical,
-                    VoxPaletteStorage_getColorData(&paletteStorage, chunkPalette),
-                    ChunkStorage_chunkColorData(&chunkStorage, chunk),
-                    &renderer.modelStorage,
-                    model);
             } while (IdAllocator_next(&chunkStorage.idAllocator, chunk, &chunk));
 
             Renderer_recreateCommandBuffers(&renderer, &device);
