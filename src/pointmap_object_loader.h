@@ -1,16 +1,15 @@
 #ifndef POINTMAP_OBJECT_LOADER_H
 #define POINTMAP_OBJECT_LOADER_H
 
-#include "./vox_object.h"
+#include "./chunks.h"
+#include "./vox_palette.h"
 #include <stdio.h>
 
-void loadVoxObjectFromPointmapFile(
-    VkDevice logicalDevice,
-    VoxBlockStorage* blockStorage,
+void loadChunksFromPointmapFile(
+    ChunkStorage* chunkStorage,
+    ChunkStorageChanges* chunkStorageChanges,
     VoxPaletteStorage* paletteStorage,
-    ModelStorage* modelStorage,
-    vec3 pos,
-    FILE* file,
-    VoxObject* object);
+    VoxPaletteRef palette,
+    FILE* file);
 
 #endif

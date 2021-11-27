@@ -1,6 +1,7 @@
 #include "./pointmap_object_loader.h"
 
 #include <limits.h>
+#include <math.h>
 #include <stdlib.h>
 
 char END_HEADER[] = "end_header\r\n";
@@ -22,14 +23,12 @@ static void skipPlyHeader(FILE* file)
     }
 }
 
-void loadVoxObjectFromPointmapFile(
-    VkDevice logicalDevice,
-    VoxBlockStorage* blockStorage,
+void loadChunksFromPointmapFile(
+    ChunkStorage* chunkStorage,
+    ChunkStorageChanges* chunkStorageChanges,
     VoxPaletteStorage* paletteStorage,
-    ModelStorage* modelStorage,
-    vec3 pos,
-    FILE* file,
-    VoxObject* object)
+    VoxPaletteRef palette,
+    FILE* file)
 {
     if (file == NULL) {
         puts("Pointmap object file is NULL. Exiting.");
@@ -59,18 +58,8 @@ void loadVoxObjectFromPointmapFile(
             maxZ = z;
     }
 
-    VoxPaletteRef palette = VoxPaletteStorage_add(paletteStorage);
-
-    VoxObject_init(
-        object,
-        blockStorage,
-        pos,
-        (maxX - minX + 1) / VOX_BLOCK_SCALE + 1,
-        (maxY - minY + 1) / VOX_BLOCK_SCALE + 1,
-        (maxZ - minZ + 1) / VOX_BLOCK_SCALE + 1,
-        palette);
-
-    vec3* paletteColorData = VoxPaletteStorage_getColorData(paletteStorage, palette);
+    vec3* paletteColorData
+        = VoxPaletteStorage_getColorData(paletteStorage, palette);
     unsigned int paletteColors = 1;
 
     fseek(file, endOfHeader, SEEK_SET);
@@ -84,8 +73,8 @@ void loadVoxObjectFromPointmapFile(
         while (paletteColorData[voxColorId][0] != (float)r / 255
             || paletteColorData[voxColorId][1] != (float)g / 255
             || paletteColorData[voxColorId][2] != (float)b / 255) {
-            if (voxColorId == UCHAR_MAX) {
-                puts("Pointmap object file colors do not fi in palette. Exiting.");
+            if (voxColorId == 255) {
+                puts("Pointmap object file colors do not fit in palette. Exiting.");
                 exit(EXIT_FAILURE);
             }
             if (voxColorId == paletteColors) {
@@ -97,12 +86,24 @@ void loadVoxObjectFromPointmapFile(
             }
             voxColorId++;
         }
-        VoxObject_setVoxel(
-            object,
-            logicalDevice,
-            blockStorage,
-            modelStorage,
-            voxPos,
-            voxColorId);
+
+        ivec3 chunkPos;
+        chunkPos[0] = (int)floorf(voxPos[0] / (float)CHUNK_SCALE);
+        chunkPos[1] = (int)floorf(voxPos[1] / (float)CHUNK_SCALE);
+        chunkPos[2] = (int)floorf(voxPos[2] / (float)CHUNK_SCALE);
+        ChunkRef chunk;
+        if (!ChunkStorage_findChunkFromPos(chunkStorage, chunkPos, &chunk)) {
+            ChunkStorage_add(
+                chunkStorage,
+                chunkStorageChanges,
+                1,
+                &chunkPos,
+                &chunk);
+        }
+        uint32_t voxId
+            = voxPos[0] % CHUNK_SCALE
+            + voxPos[1] % CHUNK_SCALE * CHUNK_SCALE
+            + voxPos[2] % CHUNK_SCALE * CHUNK_SCALE * CHUNK_SCALE;
+        ChunkStorage_chunkColorData(chunkStorage, chunk)[voxId] = voxColorId;
     }
 }

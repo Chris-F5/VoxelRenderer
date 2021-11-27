@@ -7,14 +7,13 @@
 
 #include <cglm/cglm.h>
 
-#include "./renderer.h"
 #include "./camera.h"
+#include "./chunks.h"
 #include "./models.h"
 #include "./pointmap_object_loader.h"
+#include "./renderer.h"
 #include "./utils.h"
 #include "./vert_gen.h"
-#include "./vox_blocks.h"
-#include "./vox_object.h"
 #include "./vulkan_device.h"
 
 const uint32_t WIDTH = 800;
@@ -65,56 +64,89 @@ int main()
     VulkanDevice device;
     VulkanDevice_init(&device, window);
 
-    VkExtent2D extent = choosePresentExtent(window, device.physicalProperties.surfaceCapabilities);
+    VkExtent2D extent = choosePresentExtent(
+        window,
+        device.physicalProperties.surfaceCapabilities);
 
     Renderer renderer;
     Renderer_init(&renderer, &device, extent);
 
     /* VOXELS */
-    VoxBlockStorage blockStorage;
+    ChunkStorage chunkStorage;
+    ChunkGpuStorage chunkGpuStorage;
+    VoxPaletteRef chunkPalette;
     VoxPaletteStorage paletteStorage;
     {
-        VoxBlockStorage_init(&blockStorage);
+        ChunkStorage_init(&chunkStorage);
+        ChunkGpuStorage_init(&chunkGpuStorage, device.logical, device.physical);
         VoxPaletteStorage_init(&paletteStorage);
 
-        FILE* pointmapFile = fopen("monu1.ply", "r");
+        chunkPalette = VoxPaletteStorage_add(&paletteStorage);
 
-        VoxObject object;
-        loadVoxObjectFromPointmapFile(
+        ChunkStorageChanges pointmapLoadChunkChanges;
+        ChunkStorageChanges_init(
+            &pointmapLoadChunkChanges,
+            400,
+            400);
+        {
+            FILE* pointmapFile = fopen("monu1.ply", "r");
+            loadChunksFromPointmapFile(
+                &chunkStorage,
+                &pointmapLoadChunkChanges,
+                &paletteStorage,
+                chunkPalette,
+                pointmapFile);
+            fclose(pointmapFile);
+        }
+
+        /*
+        ChunkGpuStorage_update(
+            &chunkGpuStorage,
             device.logical,
-            &blockStorage,
-            &paletteStorage,
-            &renderer.modelStorage,
-            (vec3) { 0.0f, 0.0f, 0.0f },
-            pointmapFile,
-            &object);
+            &chunkStorage,
+            &pointmapLoadChunkChanges);
+        */
 
-        for (int b = 0; b < object.width * object.height * object.depth; b++)
-            if (object.blockMask[b]) {
-                int x = b % object.width;
-                int y = b / object.width % object.height;
-                int z = b / (object.width * object.height);
-                updateVoxBlockModel(
-                    device.logical,
-                    &blockStorage,
-                    &paletteStorage,
+        ChunkRef chunk;
+        if (IdAllocator_first(&chunkStorage.idAllocator, &chunk)) {
+            do {
+                ModelRef model = ModelStorage_add(
                     &renderer.modelStorage,
-                    object.blocks[b],
-                    object.palette,
-                    object.models[b],
-                    (vec3) {
-                        (float)(x * VOX_BLOCK_SCALE),
-                        (float)(y * VOX_BLOCK_SCALE),
-                        (float)(z * VOX_BLOCK_SCALE) });
-            }
+                    device.logical,
+                    MAX_CHUNK_VERT_COUNT);
 
-        Renderer_recreateCommandBuffers(&renderer, &device);
+                vec3 worldPos;
+                worldPos[0] = chunkStorage.positions[chunk][0] * CHUNK_SCALE;
+                worldPos[1] = chunkStorage.positions[chunk][1] * CHUNK_SCALE;
+                worldPos[2] = chunkStorage.positions[chunk][2] * CHUNK_SCALE;
+
+                ModelUniformData modelData;
+                glm_translate_make(modelData.model, worldPos);
+
+                ModelStorage_updateUniformData(
+                    &renderer.modelStorage,
+                    device.logical,
+                    model,
+                    modelData);
+
+                generateChunkVertices(
+                    device.logical,
+                    VoxPaletteStorage_getColorData(&paletteStorage, chunkPalette),
+                    ChunkStorage_chunkColorData(&chunkStorage, chunk),
+                    &renderer.modelStorage,
+                    model);
+            } while (IdAllocator_next(&chunkStorage.idAllocator, chunk, &chunk));
+
+            Renderer_recreateCommandBuffers(&renderer, &device);
+        }
     }
 
     /* CAMERA */
     Camera camera;
     {
-        float aspectRatio = (float)renderer.presentExtent.width / (float)renderer.presentExtent.height;
+        float aspectRatio
+            = (float)renderer.presentExtent.width
+            / (float)renderer.presentExtent.height;
         Camera_init(&camera, aspectRatio);
         camera.pos[0] = 100.0f;
         camera.pos[1] = 100.0f;
@@ -135,7 +167,8 @@ int main()
     }
     vkDeviceWaitIdle(device.logical);
 
-    VoxBlockStorage_destroy(&blockStorage);
+    ChunkStorage_destroy(&chunkStorage);
+    ChunkGpuStorage_destroy(&chunkGpuStorage, device.logical);
     VoxPaletteStorage_destroy(&paletteStorage);
     Renderer_destroy(&renderer, device.logical);
 }

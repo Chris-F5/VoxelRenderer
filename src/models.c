@@ -8,7 +8,7 @@
 #include "vk_utils/exceptions.h"
 
 static const uint32_t MODEL_CAPACITY = 100;
-static const uint32_t TOTAL_VERTEX_CAPACITY = 1000000;
+static const uint32_t TOTAL_VERTEX_CAPACITY = 20000000;
 
 const VkVertexInputBindingDescription MODEL_VERTEX_BINDING_DESCRIPTIONS[] = {
     { 0, sizeof(ModelVertex), VK_VERTEX_INPUT_RATE_VERTEX }
@@ -75,7 +75,7 @@ static void bindModelUniformDescriptorSets(
     VkDevice device,
     uint32_t setCount,
     const VkDescriptorSet* descriptorSets,
-    const VkDescriptorBufferInfo* blockRenderInfoUniformBufferInfos)
+    const VkDescriptorBufferInfo* uniformBufferInfos)
 {
     for (int i = 0; i < setCount; i++) {
         VkWriteDescriptorSet uniformBufferDescriptorWrite;
@@ -87,7 +87,7 @@ static void bindModelUniformDescriptorSets(
         uniformBufferDescriptorWrite.descriptorCount = 1;
         uniformBufferDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         uniformBufferDescriptorWrite.pImageInfo = NULL;
-        uniformBufferDescriptorWrite.pBufferInfo = &blockRenderInfoUniformBufferInfos[i];
+        uniformBufferDescriptorWrite.pBufferInfo = &uniformBufferInfos[i];
         uniformBufferDescriptorWrite.pTexelBufferView = NULL;
 
         vkUpdateDescriptorSets(device, 1, &uniformBufferDescriptorWrite, 0, NULL);
@@ -148,7 +148,8 @@ ModelRef ModelStorage_add(
     VkDevice logicalDevice,
     uint32_t vertexCapacity)
 {
-    uint32_t modelIndex = IdAllocator_add(&storage->idAllocator);
+    uint32_t modelIndex;
+    IdAllocator_allocate(&storage->idAllocator, 1, &modelIndex);
 
     /* UNIFORM BUFFER */
     allocateDescriptorSets(

@@ -5,9 +5,7 @@
 
 #include <cglm/vec3.h>
 
-#include "./vox_blocks.h"
-
-#define MAX_BLOCK_VERT_COUNT (VOX_BLOCK_VOX_COUNT * 18)
+#include "chunks.h"
 
 const vec3 FACE_POINTS_XP[] = {
     { 1, 0, 0 },
@@ -84,34 +82,34 @@ static void insertVerts(
     }
 }
 
-static inline uint32_t xyxToBlockIndex(int x, int y, int z)
+static inline uint32_t xyzToChunkIndex(int x, int y, int z)
 {
-    return x + y * VOX_BLOCK_SCALE + z * VOX_BLOCK_SCALE * VOX_BLOCK_SCALE;
+    return x + y * CHUNK_SCALE + z * CHUNK_SCALE * CHUNK_SCALE;
 }
 
-void generateVoxBlockVertices(
+void generateChunkVertices(
     VkDevice logicalDevice,
     const vec3* colorPalette,
-    const unsigned char* blockColors,
+    const unsigned char* chunkColors,
     ModelStorage* modelStorage,
     ModelRef targetModel)
 {
     uint32_t vertCount = 0;
     ModelVertex* verts
-        = (ModelVertex*)malloc(MAX_BLOCK_VERT_COUNT * sizeof(ModelVertex));
-    for (int i = 0; i < VOX_BLOCK_VOX_COUNT; i++)
-        if (blockColors[i] != 0) {
-            int x = i % VOX_BLOCK_SCALE;
-            int y = i / VOX_BLOCK_SCALE % VOX_BLOCK_SCALE;
-            int z = i / (VOX_BLOCK_SCALE * VOX_BLOCK_SCALE);
+        = (ModelVertex*)malloc(MAX_CHUNK_VERT_COUNT * sizeof(ModelVertex));
+    for (int i = 0; i < CHUNK_VOX_COUNT; i++)
+        if (chunkColors[i] != 0) {
+            int x = i % CHUNK_SCALE;
+            int y = i / CHUNK_SCALE % CHUNK_SCALE;
+            int z = i / (CHUNK_SCALE * CHUNK_SCALE);
 
             vec3 color;
-            color[0] = colorPalette[blockColors[i]][0];
-            color[1] = colorPalette[blockColors[i]][1];
-            color[2] = colorPalette[blockColors[i]][2];
+            color[0] = colorPalette[chunkColors[i]][0];
+            color[1] = colorPalette[chunkColors[i]][1];
+            color[2] = colorPalette[chunkColors[i]][2];
 
             if (x == 0
-                || blockColors[xyxToBlockIndex(x - 1, y, z)] == 0) {
+                || chunkColors[xyzToChunkIndex(x - 1, y, z)] == 0) {
                 insertVerts(
                     x, y, z,
                     color,
@@ -120,8 +118,8 @@ void generateVoxBlockVertices(
                     &verts[vertCount]);
                 vertCount += sizeof(FACE_POINTS_XN) / sizeof(FACE_POINTS_XN[0]);
             }
-            if (x == VOX_BLOCK_SCALE - 1
-                || blockColors[xyxToBlockIndex(x + 1, y, z)] == 0) {
+            if (x == CHUNK_SCALE - 1
+                || chunkColors[xyzToChunkIndex(x + 1, y, z)] == 0) {
                 insertVerts(
                     x, y, z,
                     color,
@@ -132,7 +130,7 @@ void generateVoxBlockVertices(
             }
 
             if (y == 0
-                || blockColors[xyxToBlockIndex(x, y - 1, z)] == 0) {
+                || chunkColors[xyzToChunkIndex(x, y - 1, z)] == 0) {
                 insertVerts(
                     x, y, z,
                     color,
@@ -141,8 +139,8 @@ void generateVoxBlockVertices(
                     &verts[vertCount]);
                 vertCount += sizeof(FACE_POINTS_YN) / sizeof(FACE_POINTS_YN[0]);
             }
-            if (y == VOX_BLOCK_SCALE - 1
-                || blockColors[xyxToBlockIndex(x, y + 1, z)] == 0) {
+            if (y == CHUNK_SCALE - 1
+                || chunkColors[xyzToChunkIndex(x, y + 1, z)] == 0) {
                 insertVerts(
                     x, y, z,
                     color,
@@ -153,7 +151,7 @@ void generateVoxBlockVertices(
             }
 
             if (z == 0
-                || blockColors[xyxToBlockIndex(x, y, z - 1)] == 0) {
+                || chunkColors[xyzToChunkIndex(x, y, z - 1)] == 0) {
                 insertVerts(
                     x, y, z,
                     color,
@@ -162,8 +160,8 @@ void generateVoxBlockVertices(
                     &verts[vertCount]);
                 vertCount += sizeof(FACE_POINTS_ZN) / sizeof(FACE_POINTS_ZN[0]);
             }
-            if (z == VOX_BLOCK_SCALE - 1
-                || blockColors[xyxToBlockIndex(x, y, z + 1)] == 0) {
+            if (z == CHUNK_SCALE - 1
+                || chunkColors[xyzToChunkIndex(x, y, z + 1)] == 0) {
                 insertVerts(
                     x, y, z,
                     color,

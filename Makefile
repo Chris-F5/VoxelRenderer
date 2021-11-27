@@ -7,7 +7,7 @@ HEADERS = $(shell find ./src -type f -name "*.h")
 OBJS = $(patsubst ./src/%.c, obj/%.o, $(SRCS))
 DEPENDS = $(patsubst ./src/%.c, obj/%.d,$(SRCS))
 
-.PHONY: run clean all
+.PHONY: all run clean debug valgrind
 
 all: target/$(OUTPUTNAME) target/vox_tri.vert.spv target/vox_tri.frag.spv target/debug_line.vert.spv target/debug_line.frag.spv target/monu1.ply
 
@@ -37,6 +37,9 @@ run: all
 
 debug: all
 	cd target; gdb $(OUTPUTNAME)
+
+valgrind: all
+	cd target; valgrind ./$(OUTPUTNAME)
 
 clean:
 	rm -fr target obj
