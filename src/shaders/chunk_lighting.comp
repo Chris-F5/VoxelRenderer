@@ -1,0 +1,92 @@
+#version 450
+#define NEIGHBOUR_NONE 0xFF
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(push_constant) uniform Constants {
+    uint thisChunk;
+    uint CHUNK_SCALE;
+    uint CHUNK_VOX_COUNT;
+};
+
+layout(binding = 0) buffer Brightness {
+    uint brightnessData[];
+};
+
+layout(binding = 1) buffer VoxMask {
+    uint voxMaskData[];
+};
+
+layout(binding = 2) buffer Neighbours {
+    uint neighboursData[];
+};
+
+void setBrightness(uint chunk, uint index, uint brightness) {
+    brightnessData[index + (chunk * CHUNK_VOX_COUNT)] = brightness * 256 * 256 * 256;
+}
+
+uint testVox(uint chunk, uint index) {
+    return voxMaskData[index / 32 + (chunk * CHUNK_VOX_COUNT / 32)] & (1 << index % 32);
+}
+
+uint getNeighbourDataIndex(uint index) {
+    return (neighboursData[index / 4] & (0xFF << (index % 4 * 8))) >> (index % 4 * 8);
+}
+
+uint getNeighbourAbove(uint chunk) {
+    //return getNeighbourDataIndex(chunk * 6 + 4);
+    return neighboursData[chunk * 6 + 4];
+}
+
+uint xyzToIndex(uint x, uint y, uint z) {
+    return x
+        + y * CHUNK_SCALE
+        + z * CHUNK_SCALE * CHUNK_SCALE;
+}
+
+void main() {
+    uint x = gl_WorkGroupID.x;
+    uint y = gl_WorkGroupID.y;
+    uint z = gl_WorkGroupID.z;
+
+    uint id = xyzToIndex(x, y, z);
+
+    bool hitVox = false;
+
+    uint checkY = y + 1;
+    uint checkChunk = thisChunk;
+    uint stopper = 0;
+    /*
+       while (checkChunk != 0xFF && stopper < 2) {
+       while (checkY < CHUNK_SCALE) {
+       uint checkId = xyzToIndex(x, y + 1, z);
+
+       if(testVox(checkChunk, checkId) != 0) {
+       hitVox = true;
+       break;
+       }
+
+       checkY += 1;
+       }
+       if(hitVox) {
+       break;
+       }
+       checkChunk = getNeighbourAbove(checkChunk);
+       checkY = 0;
+       stopper += 1;
+       }
+
+       if(hitVox) {
+       setBrightness(thisChunk, id, 100);
+       } else {
+       setBrightness(thisChunk, id, 255);
+       }
+     */
+
+    if(getNeighbourAbove(thisChunk) == ~0) {
+        setBrightness(thisChunk, id, 20);
+    } else {
+        setBrightness(thisChunk, id, 255);
+    }
+
+}

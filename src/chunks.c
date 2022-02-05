@@ -23,12 +23,21 @@ static const unsigned int CHUNK_CAPACITY = 10000;
 void ChunkStorage_init(ChunkStorage* storage)
 {
     IdAllocator_init(&storage->idAllocator, CHUNK_CAPACITY);
+    storage->voxBitMask = (uint8_t(*)[CHUNK_BIT_MASK_SIZE])malloc(
+        CHUNK_CAPACITY * sizeof(uint8_t[CHUNK_BIT_MASK_SIZE]));
     storage->colors = (uint8_t(*)[CHUNK_VOX_COUNT])malloc(
         CHUNK_CAPACITY * sizeof(uint8_t[CHUNK_VOX_COUNT]));
     storage->neighbours = (ChunkRef(*)[6])malloc(
         CHUNK_CAPACITY * sizeof(ChunkRef[6]));
     storage->positions = (ivec3*)malloc(
         CHUNK_CAPACITY * sizeof(ivec3));
+}
+
+inline uint8_t* ChunkStorage_chunkBitMask(
+    ChunkStorage* storage,
+    ChunkRef chunk)
+{
+    return storage->voxBitMask[chunk];
 }
 
 inline uint8_t* ChunkStorage_chunkColorData(
@@ -50,6 +59,8 @@ void ChunkStorage_add(
         count,
         chunks);
     for (uint32_t i = 0; i < count; i++) {
+        printf("%d\n", chunks[i]);
+        memset(&storage->voxBitMask[chunks[i]], 0, CHUNK_BIT_MASK_SIZE);
         memset(storage->colors[chunks[i]], 0, CHUNK_VOX_COUNT);
         for (int n = 0; n < 6; n++)
             storage->neighbours[chunks[i]][n] = CHUNK_NEIGHBOUR_EMPTY;
@@ -58,6 +69,10 @@ void ChunkStorage_add(
         storage->positions[chunks[i]][2] = positions[i][2];
     }
     ChunkStorageChanges_addColorChanges(
+        storageChanges,
+        count,
+        chunks);
+    ChunkStorageChanges_addVoxBitMaskChanges(
         storageChanges,
         count,
         chunks);
@@ -283,9 +298,15 @@ void ChunkStorage_destroy(
 
 void ChunkStorageChanges_init(
     ChunkStorageChanges* storage,
+    uint32_t voxBitMaskChangesCapacity,
     uint32_t colorChangesCapacity,
     uint32_t neighbourChangesCapacity)
 {
+    storage->voxBitMaskChangesCapacity = voxBitMaskChangesCapacity;
+    storage->voxBitMaskChangesCount = 0;
+    storage->voxBitMaskChangesDupesCheckedUntil = 0;
+    storage->voxBitMaskChanges = (ChunkRef*)malloc(
+        voxBitMaskChangesCapacity * sizeof(ChunkRef));
     storage->colorChangesCapacity = colorChangesCapacity;
     storage->colorChangesCount = 0;
     storage->colorChangesDupesCheckedUntil = 0;
@@ -321,6 +342,29 @@ static void removeChunkDupes(
         }
     }
     *count = *dupesCheckedUntil;
+}
+
+void ChunkStorageChanges_addVoxBitMaskChanges(
+    ChunkStorageChanges* storage,
+    uint32_t chunksCount,
+    ChunkRef* chunks)
+{
+    if (storage->voxBitMaskChangesCount + chunksCount > storage->voxBitMaskChangesCapacity) {
+        removeChunkDupes(
+            &storage->voxBitMaskChangesCount,
+            &storage->voxBitMaskChangesDupesCheckedUntil,
+            storage->voxBitMaskChanges);
+        if (storage->voxBitMaskChangesCount + chunksCount > storage->voxBitMaskChangesCapacity) {
+            storage->voxBitMaskChangesCapacity
+                = storage->voxBitMaskChangesCount + chunksCount + 10;
+            storage->voxBitMaskChanges = (ChunkRef*)realloc(
+                storage->voxBitMaskChanges,
+                storage->voxBitMaskChangesCapacity);
+        }
+    }
+    for (int i = 0; i < chunksCount; i++)
+        storage->voxBitMaskChanges[storage->voxBitMaskChangesCount + i] = chunks[i];
+    storage->voxBitMaskChangesCount += chunksCount;
 }
 
 void ChunkStorageChanges_addColorChanges(
@@ -385,6 +429,15 @@ void ChunkGpuStorage_init(
     createBuffer(
         logicalDevice,
         physicalDevice,
+        CHUNK_CAPACITY * sizeof(uint8_t[CHUNK_BIT_MASK_SIZE]),
+        0,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        &storage->voxBitMask,
+        &storage->voxBitMaskMemory);
+    createBuffer(
+        logicalDevice,
+        physicalDevice,
         CHUNK_CAPACITY * sizeof(uint8_t[CHUNK_VOX_COUNT]),
         0,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
@@ -394,7 +447,7 @@ void ChunkGpuStorage_init(
     createBuffer(
         logicalDevice,
         physicalDevice,
-        CHUNK_CAPACITY * sizeof(uint8_t[CHUNK_VOX_COUNT]),
+        CHUNK_CAPACITY * sizeof(uint32_t[CHUNK_VOX_COUNT]),
         0,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -417,6 +470,18 @@ void ChunkGpuStorage_update(
     ChunkStorage* cpuStorage,
     ChunkStorageChanges* changes)
 {
+    removeChunkDupes(
+        &changes->voxBitMaskChangesCount,
+        &changes->voxBitMaskChangesDupesCheckedUntil,
+        changes->voxBitMaskChanges);
+    for (uint32_t i = 0; i < changes->voxBitMaskChangesCount; i++) {
+        copyDataToBuffer(
+            logicalDevice,
+            cpuStorage->voxBitMask[changes->voxBitMaskChanges[i]],
+            gpuStorage->voxBitMaskMemory,
+            changes->voxBitMaskChanges[i] * sizeof(uint8_t[CHUNK_BIT_MASK_SIZE]),
+            sizeof(uint8_t[CHUNK_BIT_MASK_SIZE]));
+    }
     removeChunkDupes(
         &changes->colorChangesCount,
         &changes->colorChangesDupesCheckedUntil,
@@ -447,6 +512,8 @@ void ChunkGpuStorage_destroy(
     ChunkGpuStorage* storage,
     VkDevice logicalDevice)
 {
+    vkDestroyBuffer(logicalDevice, storage->voxBitMask, NULL);
+    vkFreeMemory(logicalDevice, storage->voxBitMaskMemory, NULL);
     vkDestroyBuffer(logicalDevice, storage->colors, NULL);
     vkFreeMemory(logicalDevice, storage->colorsMemory, NULL);
     vkDestroyBuffer(logicalDevice, storage->brightness, NULL);

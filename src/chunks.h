@@ -1,6 +1,7 @@
 #ifndef CHUNKS_H
 #define CHUNKS_H
 
+#include "./bit_array.h"
 #include "./id_allocator.h"
 #include "./vox_palette.h"
 
@@ -10,6 +11,7 @@
 
 #define CHUNK_SCALE 32
 #define CHUNK_VOX_COUNT (CHUNK_SCALE * CHUNK_SCALE * CHUNK_SCALE)
+#define CHUNK_BIT_MASK_SIZE ((CHUNK_VOX_COUNT + 7) / 8)
 
 typedef uint32_t ChunkRef;
 
@@ -23,6 +25,7 @@ extern const int CHUNK_POSITIVE_Z_NEIGHBOUR;
 
 typedef struct {
     IdAllocator idAllocator;
+    uint8_t (*voxBitMask)[CHUNK_BIT_MASK_SIZE];
     uint8_t (*colors)[CHUNK_VOX_COUNT];
     /**
      * 'neighbours' contains the neighbours of each chunk in the order:
@@ -35,6 +38,10 @@ typedef struct {
 } ChunkStorage;
 
 typedef struct {
+    uint32_t voxBitMaskChangesCapacity;
+    uint32_t voxBitMaskChangesCount;
+    uint32_t voxBitMaskChangesDupesCheckedUntil;
+    ChunkRef* voxBitMaskChanges;
     uint32_t colorChangesCapacity;
     uint32_t colorChangesCount;
     uint32_t colorChangesDupesCheckedUntil;
@@ -46,6 +53,8 @@ typedef struct {
 } ChunkStorageChanges;
 
 typedef struct {
+    VkBuffer voxBitMask;
+    VkDeviceMemory voxBitMaskMemory;
     VkBuffer colors;
     VkDeviceMemory colorsMemory;
     VkBuffer brightness;
@@ -57,6 +66,10 @@ typedef struct {
 /* CHUNK STORAGE METHODS */
 
 void ChunkStorage_init(ChunkStorage* storage);
+
+uint8_t* ChunkStorage_chunkBitMask(
+    ChunkStorage* storage,
+    ChunkRef chunk);
 
 uint8_t* ChunkStorage_chunkColorData(
     ChunkStorage* storage,
@@ -96,8 +109,14 @@ void ChunkStorage_destroy(
 
 void ChunkStorageChanges_init(
     ChunkStorageChanges* storage,
+    uint32_t voxBitMaskChangesCapacity,
     uint32_t colorChangesCapacity,
     uint32_t neighbourChangesCapacity);
+
+void ChunkStorageChanges_addVoxBitMaskChanges(
+    ChunkStorageChanges* storage,
+    uint32_t chunksCount,
+    ChunkRef* chunks);
 
 void ChunkStorageChanges_addColorChanges(
     ChunkStorageChanges* storage,

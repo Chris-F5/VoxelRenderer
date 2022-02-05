@@ -8,6 +8,7 @@
 #include <cglm/cglm.h>
 
 #include "./camera.h"
+#include "./chunk_lighting.h"
 #include "./chunks.h"
 #include "./models.h"
 #include "./pointmap_object_loader.h"
@@ -71,21 +72,23 @@ int main()
     Renderer renderer;
     Renderer_init(&renderer, &device, extent);
 
-    /* VOXELS */
+    /* PALETTE */
+    VoxPaletteStorage paletteStorage;
+    VoxPaletteRef chunkPalette;
+    VoxPaletteStorage_init(&paletteStorage);
+    chunkPalette = VoxPaletteStorage_add(&paletteStorage);
+
+    /* CHUNK STORAGE */
     ChunkStorage chunkStorage;
     ChunkGpuStorage chunkGpuStorage;
-    VoxPaletteRef chunkPalette;
-    VoxPaletteStorage paletteStorage;
     {
         ChunkStorage_init(&chunkStorage);
         ChunkGpuStorage_init(&chunkGpuStorage, device.logical, device.physical);
-        VoxPaletteStorage_init(&paletteStorage);
-
-        chunkPalette = VoxPaletteStorage_add(&paletteStorage);
 
         ChunkStorageChanges pointmapLoadChunkChanges;
         ChunkStorageChanges_init(
             &pointmapLoadChunkChanges,
+            400,
             400,
             400);
         {
@@ -99,22 +102,66 @@ int main()
             fclose(pointmapFile);
         }
 
-        /*
         ChunkGpuStorage_update(
             &chunkGpuStorage,
             device.logical,
             &chunkStorage,
             &pointmapLoadChunkChanges);
-        */
+
+        ChunkStorageChanges_destroy(&pointmapLoadChunkChanges);
+    }
+
+    /* CHUNK LIGHTING */
+    ChunkLighting chunkLighting;
+    {
+
+        ChunkLighting_init(
+            &chunkLighting,
+            &chunkGpuStorage,
+            device.logical,
+            device.transientGraphicsCommandPool);
+
+        /* UPDATE CHUNK LIGHTING */
 
         ChunkRef chunk;
-        ChunkVertGen vertGen;
-        ChunkVertGet_init(&vertGen);
+        ChunkRef* chunksToUpdate
+            = (ChunkRef*)malloc(chunkStorage.idAllocator.count * sizeof(ChunkRef));
+        uint32_t i = 0;
+        if (IdAllocator_first(&chunkStorage.idAllocator, &chunk))
+            do {
+                if (chunkStorage.idAllocator.count <= i) {
+                    puts("chunk id allocator count does not match iterator (<). exiting");
+                    exit(EXIT_FAILURE);
+                }
+                chunksToUpdate[i] = chunk;
+                i += 1;
+            } while (IdAllocator_next(&chunkStorage.idAllocator, chunk, &chunk));
+        if (chunkStorage.idAllocator.count > i) {
+            puts("chunk id allocator count does not match iterator (>). exiting");
+            exit(EXIT_FAILURE);
+        }
+        ChunkLighting_updateChunks(
+            &chunkLighting,
+            device.logical,
+            device.graphicsQueue,
+            chunkStorage.idAllocator.count,
+            chunksToUpdate);
+            
+        free(chunksToUpdate);
+    }
+
+    /* GENERATE CHUNK MESHES */
+    ChunkVertGen vertGen;
+    {
+        ChunkVertGen_init(&vertGen);
+        ChunkRef chunk;
         if (IdAllocator_first(&chunkStorage.idAllocator, &chunk)) {
             do {
                 ChunkVertGen_generate(
                     &vertGen,
                     &chunkStorage,
+                    &chunkGpuStorage,
+                    device.logical,
                     chunk,
                     &paletteStorage,
                     chunkPalette);

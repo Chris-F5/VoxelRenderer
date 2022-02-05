@@ -4,6 +4,9 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "./bit_array.h"
+#include "chunks.h"
+
 char END_HEADER[] = "end_header\r\n";
 
 static void skipPlyHeader(FILE* file)
@@ -60,7 +63,7 @@ void loadChunksFromPointmapFile(
 
     vec3* paletteColorData
         = VoxPaletteStorage_getColorData(paletteStorage, palette);
-    unsigned int paletteColors = 1;
+    unsigned int paletteColors = 0;
 
     fseek(file, endOfHeader, SEEK_SET);
 
@@ -69,7 +72,7 @@ void loadChunksFromPointmapFile(
         voxPos[0] = x - minX;
         voxPos[1] = y - minY;
         voxPos[2] = z - minZ;
-        unsigned char voxColorId = 1;
+        unsigned char voxColorId = 0;
         while (paletteColorData[voxColorId][0] != (float)r / 255
             || paletteColorData[voxColorId][1] != (float)g / 255
             || paletteColorData[voxColorId][2] != (float)b / 255) {
@@ -99,11 +102,22 @@ void loadChunksFromPointmapFile(
                 1,
                 &chunkPos,
                 &chunk);
+        } else {
+            ChunkStorageChanges_addColorChanges(
+                chunkStorageChanges,
+                1,
+                &chunk);
+            ChunkStorageChanges_addVoxBitMaskChanges(
+                chunkStorageChanges,
+                1,
+                &chunk);
         }
         uint32_t voxId
             = voxPos[0] % CHUNK_SCALE
             + voxPos[1] % CHUNK_SCALE * CHUNK_SCALE
             + voxPos[2] % CHUNK_SCALE * CHUNK_SCALE * CHUNK_SCALE;
         ChunkStorage_chunkColorData(chunkStorage, chunk)[voxId] = voxColorId;
+        uint8_t* chunkBitMask = ChunkStorage_chunkBitMask(chunkStorage, chunk);
+        setBit(chunkBitMask, voxId);
     }
 }

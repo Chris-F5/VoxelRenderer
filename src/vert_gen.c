@@ -5,6 +5,9 @@
 
 #include <cglm/vec3.h>
 
+#include "./bit_array.h"
+#include "./vk_utils/exceptions.h"
+
 #define MAX_CHUNK_VERT_COUNT (CHUNK_VOX_COUNT * 18)
 
 const vec3 FACE_POINTS_XP[] = {
@@ -87,37 +90,54 @@ static inline uint32_t xyzToChunkIndex(int x, int y, int z)
     return x + y * CHUNK_SCALE + z * CHUNK_SCALE * CHUNK_SCALE;
 }
 
-void ChunkVertGet_init(ChunkVertGen* vertGen)
+void ChunkVertGen_init(ChunkVertGen* vertGen)
 {
     vertGen->vertCount = 0;
     vertGen->vertBuffer
         = (ModelVertex*)malloc(MAX_CHUNK_VERT_COUNT * sizeof(ModelVertex));
 }
 
-void ChunkVertGen_generate(
-    ChunkVertGen* vertGen,
+void ChunkVertGen_generate(ChunkVertGen* vertGen,
     ChunkStorage* chunkStorage,
+    ChunkGpuStorage* chunkGpuStorage,
+    VkDevice logicalDevice,
     ChunkRef chunk,
     VoxPaletteStorage* paletteStorage,
     VoxPaletteRef palette)
 {
+    uint8_t* chunkBitMask = ChunkStorage_chunkBitMask(chunkStorage, chunk);
     uint8_t* chunkColors = ChunkStorage_chunkColorData(chunkStorage, chunk);
     vec3* colorPalette = VoxPaletteStorage_getColorData(paletteStorage, palette);
+    uint32_t* chunkBrightness;
+
+    handleVkResult(
+        vkMapMemory(
+            logicalDevice,
+            chunkGpuStorage->brightnessMemory,
+            chunk * CHUNK_VOX_COUNT * sizeof(uint32_t),
+            CHUNK_VOX_COUNT,
+            0,
+            (void**)&chunkBrightness),
+        "mapping brightness gpu memory for vert gen");
 
     vertGen->vertCount = 0;
     for (int i = 0; i < CHUNK_VOX_COUNT; i++)
-        if (chunkColors[i] != 0) {
+        if (testBit(chunkBitMask, i) != 0) {
             int x = i % CHUNK_SCALE;
             int y = i / CHUNK_SCALE % CHUNK_SCALE;
             int z = i / (CHUNK_SCALE * CHUNK_SCALE);
 
+            uint32_t brightness = chunkBrightness[i];
             vec3 color;
-            color[0] = colorPalette[chunkColors[i]][0];
-            color[1] = colorPalette[chunkColors[i]][1];
-            color[2] = colorPalette[chunkColors[i]][2];
+            color[0] = colorPalette[chunkColors[i]][0]
+                * ((float)brightness / (float)UINT32_MAX);
+            color[1] = colorPalette[chunkColors[i]][1]
+                * ((float)brightness / (float)UINT32_MAX);
+            color[2] = colorPalette[chunkColors[i]][2]
+                * ((float)brightness / (float)UINT32_MAX);
 
             if (x == 0
-                || chunkColors[xyzToChunkIndex(x - 1, y, z)] == 0) {
+                || testBit(chunkBitMask, xyzToChunkIndex(x - 1, y, z)) == 0) {
                 insertVerts(
                     x, y, z,
                     color,
@@ -128,7 +148,7 @@ void ChunkVertGen_generate(
                     += sizeof(FACE_POINTS_XN) / sizeof(FACE_POINTS_XN[0]);
             }
             if (x == CHUNK_SCALE - 1
-                || chunkColors[xyzToChunkIndex(x + 1, y, z)] == 0) {
+                || testBit(chunkBitMask, xyzToChunkIndex(x + 1, y, z)) == 0) {
                 insertVerts(
                     x, y, z,
                     color,
@@ -140,7 +160,7 @@ void ChunkVertGen_generate(
             }
 
             if (y == 0
-                || chunkColors[xyzToChunkIndex(x, y - 1, z)] == 0) {
+                || testBit(chunkBitMask, xyzToChunkIndex(x, y - 1, z)) == 0) {
                 insertVerts(
                     x, y, z,
                     color,
@@ -151,7 +171,7 @@ void ChunkVertGen_generate(
                     += sizeof(FACE_POINTS_YN) / sizeof(FACE_POINTS_YN[0]);
             }
             if (y == CHUNK_SCALE - 1
-                || chunkColors[xyzToChunkIndex(x, y + 1, z)] == 0) {
+                || testBit(chunkBitMask, xyzToChunkIndex(x, y + 1, z)) == 0) {
                 insertVerts(
                     x, y, z,
                     color,
@@ -163,7 +183,7 @@ void ChunkVertGen_generate(
             }
 
             if (z == 0
-                || chunkColors[xyzToChunkIndex(x, y, z - 1)] == 0) {
+                || testBit(chunkBitMask, xyzToChunkIndex(x, y, z - 1)) == 0) {
                 insertVerts(
                     x, y, z,
                     color,
@@ -174,7 +194,7 @@ void ChunkVertGen_generate(
                     += sizeof(FACE_POINTS_ZN) / sizeof(FACE_POINTS_ZN[0]);
             }
             if (z == CHUNK_SCALE - 1
-                || chunkColors[xyzToChunkIndex(x, y, z + 1)] == 0) {
+                || testBit(chunkBitMask, xyzToChunkIndex(x, y, z + 1)) == 0) {
                 insertVerts(
                     x, y, z,
                     color,
@@ -185,6 +205,10 @@ void ChunkVertGen_generate(
                     += sizeof(FACE_POINTS_ZP) / sizeof(FACE_POINTS_ZP[0]);
             }
         }
+
+    vkUnmapMemory(
+        logicalDevice,
+        chunkGpuStorage->brightnessMemory);
 }
 
 void ChunkVertGen_destroy(ChunkVertGen* vertGen)

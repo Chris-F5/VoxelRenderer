@@ -6,6 +6,7 @@
 
 void IdAllocator_init(IdAllocator* allocator, uint32_t capacity)
 {
+    allocator->count = 0;
     allocator->capacity = capacity;
     allocator->maskFilled = 0;
     allocator->mask = (bool*)malloc(capacity * sizeof(bool));
@@ -17,6 +18,7 @@ void IdAllocator_allocate(
     uint32_t count,
     uint32_t* ids)
 {
+    allocator->count += count;
     uint32_t idsAllocated = 0;
     uint32_t i = 0;
     for (; i < allocator->maskFilled; i++)
@@ -45,6 +47,7 @@ void IdAllocator_remove(
     uint32_t count,
     uint32_t* ids)
 {
+    allocator->count -= count;
     for (uint32_t i = 0; i < count; i++)
         allocator->mask[ids[i]] = false;
     while (allocator->maskFilled > 0

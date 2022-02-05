@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 typedef struct {
+    uint32_t count;
     uint32_t capacity;
     uint32_t maskFilled;
     bool* mask;

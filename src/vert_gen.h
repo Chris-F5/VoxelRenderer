@@ -11,11 +11,13 @@ typedef struct {
     ModelVertex* vertBuffer;
 } ChunkVertGen;
 
-void ChunkVertGet_init(ChunkVertGen* vertGen);
+void ChunkVertGen_init(ChunkVertGen* vertGen);
 
 void ChunkVertGen_generate(
     ChunkVertGen* vertGen,
     ChunkStorage* chunkStorage,
+    ChunkGpuStorage* chunkGpuStorage,
+    VkDevice logicalDevice,
     ChunkRef chunk,
     VoxPaletteStorage* paletteStorage,
     VoxPaletteRef palette);

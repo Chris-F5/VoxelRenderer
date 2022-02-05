@@ -681,7 +681,7 @@ static void createRenderCommandBuffers(
 
         handleVkResult(
             vkAllocateCommandBuffers(logicalDevice, &allocInfo, commandBuffers),
-            "allocating command buffers");
+            "allocating render command buffers");
     }
 
     for (int s = 0; s < swapLen; s++) {
