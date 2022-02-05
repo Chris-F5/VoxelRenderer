@@ -59,7 +59,6 @@ void ChunkStorage_add(
         count,
         chunks);
     for (uint32_t i = 0; i < count; i++) {
-        printf("%d\n", chunks[i]);
         memset(&storage->voxBitMask[chunks[i]], 0, CHUNK_BIT_MASK_SIZE);
         memset(storage->colors[chunks[i]], 0, CHUNK_VOX_COUNT);
         for (int n = 0; n < 6; n++)

@@ -29,12 +29,7 @@ uint testVox(uint chunk, uint index) {
     return voxMaskData[index / 32 + (chunk * CHUNK_VOX_COUNT / 32)] & (1 << index % 32);
 }
 
-uint getNeighbourDataIndex(uint index) {
-    return (neighboursData[index / 4] & (0xFF << (index % 4 * 8))) >> (index % 4 * 8);
-}
-
 uint getNeighbourAbove(uint chunk) {
-    //return getNeighbourDataIndex(chunk * 6 + 4);
     return neighboursData[chunk * 6 + 4];
 }
 
@@ -56,37 +51,35 @@ void main() {
     uint checkY = y + 1;
     uint checkChunk = thisChunk;
     uint stopper = 0;
-    /*
-       while (checkChunk != 0xFF && stopper < 2) {
-       while (checkY < CHUNK_SCALE) {
-       uint checkId = xyzToIndex(x, y + 1, z);
+    while (checkChunk != ~0 && stopper < 4) {
+        while (checkY < CHUNK_SCALE) {
+            uint checkId = xyzToIndex(x, checkY, z);
 
-       if(testVox(checkChunk, checkId) != 0) {
-       hitVox = true;
-       break;
-       }
+            if(testVox(checkChunk, checkId) != 0) {
+                hitVox = true;
+                break;
+            }
 
-       checkY += 1;
-       }
-       if(hitVox) {
-       break;
-       }
-       checkChunk = getNeighbourAbove(checkChunk);
-       checkY = 0;
-       stopper += 1;
-       }
+            checkY += 1;
+        }
+        if(hitVox) {
+            break;
+        }
+        checkChunk = getNeighbourAbove(checkChunk);
+        checkY = 0;
+        stopper += 1;
+    }
 
-       if(hitVox) {
-       setBrightness(thisChunk, id, 100);
-       } else {
-       setBrightness(thisChunk, id, 255);
-       }
-     */
-
-    if(getNeighbourAbove(thisChunk) == ~0) {
-        setBrightness(thisChunk, id, 20);
+    if(hitVox) {
+        setBrightness(thisChunk, id, 100);
     } else {
         setBrightness(thisChunk, id, 255);
     }
+
+    /*if(getNeighbourAbove(thisChunk) == ~0) {
+        setBrightness(thisChunk, id, 20);
+    } else {
+        setBrightness(thisChunk, id, 255);
+    }*/
 
 }
