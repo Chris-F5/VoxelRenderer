@@ -92,7 +92,7 @@ int main()
             400,
             400);
         {
-            FILE* pointmapFile = fopen("monu1.ply", "r");
+            FILE* pointmapFile = fopen("object1.ply", "r");
             loadChunksFromPointmapFile(
                 &chunkStorage,
                 &pointmapLoadChunkChanges,

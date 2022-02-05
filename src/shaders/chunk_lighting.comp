@@ -1,5 +1,5 @@
 #version 450
-#define NEIGHBOUR_NONE 0xFF
+#define NEIGHBOUR_NONE ~0
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
@@ -51,7 +51,7 @@ void main() {
     uint checkY = y + 1;
     uint checkChunk = thisChunk;
     uint stopper = 0;
-    while (checkChunk != ~0 && stopper < 4) {
+    while (checkChunk != NEIGHBOUR_NONE && stopper < 4) {
         while (checkY < CHUNK_SCALE) {
             uint checkId = xyzToIndex(x, checkY, z);
 
@@ -75,11 +75,4 @@ void main() {
     } else {
         setBrightness(thisChunk, id, 255);
     }
-
-    /*if(getNeighbourAbove(thisChunk) == ~0) {
-        setBrightness(thisChunk, id, 20);
-    } else {
-        setBrightness(thisChunk, id, 255);
-    }*/
-
 }

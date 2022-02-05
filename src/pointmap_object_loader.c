@@ -7,6 +7,8 @@
 #include "./bit_array.h"
 #include "chunks.h"
 
+#define LINE_SIZE 1024
+
 char END_HEADER[] = "end_header\r\n";
 
 static void skipPlyHeader(FILE* file)
@@ -45,8 +47,13 @@ void loadChunksFromPointmapFile(
     minX = minY = minZ = INT_MAX;
     maxX = maxY = maxZ = INT_MIN;
 
+    char linebuff[LINE_SIZE];
     int x, y, z, r, g, b = 0;
-    while (fscanf(file, "%d %d %d %d %d %d\n", &x, &y, &z, &r, &g, &b) != EOF) {
+    while (fgets(linebuff, LINE_SIZE, file)) {
+        if (sscanf(linebuff, "%d %d %d %d %d %d\n", &x, &y, &z, &r, &g, &b) != 6) {
+            puts("Error reading pointmap file. exiting...");
+            exit(EXIT_FAILURE);
+        }
         if (x < minX)
             minX = x;
         if (y < minY)
@@ -67,7 +74,11 @@ void loadChunksFromPointmapFile(
 
     fseek(file, endOfHeader, SEEK_SET);
 
-    while (fscanf(file, "%d %d %d %d %d %d\n", &x, &y, &z, &r, &g, &b) != EOF) {
+    while (fgets(linebuff, LINE_SIZE, file)) {
+        if (sscanf(linebuff, "%d %d %d %d %d %d\n", &x, &y, &z, &r, &g, &b) != 6) {
+            puts("Error reading pointmap file. exiting...");
+            exit(EXIT_FAILURE);
+        }
         ivec3 voxPos;
         voxPos[0] = x - minX;
         voxPos[1] = y - minY;
