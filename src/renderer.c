@@ -697,9 +697,9 @@ static void createRenderCommandBuffers(
 
         VkClearValue clearValues[2];
         memset(clearValues, 0, sizeof(clearValues));
-        clearValues[0].color.float32[0] = 0.0f;
-        clearValues[0].color.float32[1] = 0.0f;
-        clearValues[0].color.float32[2] = 0.0f;
+        clearValues[0].color.float32[0] = 128.0f / 255.0;
+        clearValues[0].color.float32[1] = 218.0f / 255.0;
+        clearValues[0].color.float32[2] = 251.0f / 255.0;
         clearValues[0].color.float32[3] = 1.0f;
 
         clearValues[1].depthStencil.depth = 1.0f;

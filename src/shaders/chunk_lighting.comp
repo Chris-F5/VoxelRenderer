@@ -32,12 +32,18 @@ uint testVox(uint chunk, uint index) {
 uint getNeighbourAbove(uint chunk) {
     return neighboursData[chunk * 6 + 4];
 }
+uint getNeighbourRight(uint chunk) {
+    return neighboursData[chunk * 6 + 3];
+}
 
 uint xyzToIndex(uint x, uint y, uint z) {
     return x
         + y * CHUNK_SCALE
         + z * CHUNK_SCALE * CHUNK_SCALE;
 }
+
+int dx = 1;
+int dy = 2;
 
 void main() {
     uint x = gl_WorkGroupID.x;
@@ -46,33 +52,51 @@ void main() {
 
     uint id = xyzToIndex(x, y, z);
 
-    bool hitVox = false;
-
-    uint checkY = y + 1;
     uint checkChunk = thisChunk;
-    uint stopper = 0;
-    while (checkChunk != NEIGHBOUR_NONE && stopper < 4) {
-        while (checkY < CHUNK_SCALE) {
-            uint checkId = xyzToIndex(x, checkY, z);
 
-            if(testVox(checkChunk, checkId) != 0) {
-                hitVox = true;
-                break;
+    uint t = 0;
+    float v = 1;
+    uint k = 0;
+    uint cx = dy;
+    while (t < 612) {
+        if (cx >= dx) {
+            cx -= dx;
+            y += 1;
+            if (y >= CHUNK_SCALE) { 
+                y = 0;
+                checkChunk = getNeighbourAbove(checkChunk);
+                if (checkChunk == NEIGHBOUR_NONE) {
+                    break;
+                }
             }
+        } else {
+            cx += dy;
+            x += 1;
+            if (x >= CHUNK_SCALE) { 
+                x = 0;
+                checkChunk = getNeighbourRight(checkChunk);
+                if (checkChunk == NEIGHBOUR_NONE) {
+                    break;
+                }
+            }
+        }
 
-            checkY += 1;
+        uint checkId = xyzToIndex(x, y, z);
+        if(testVox(checkChunk, checkId) != 0 && t > 1) {
+            k++;
+            v -= v*float(k)/float(t);
+        } else {
+            k = 0;
         }
-        if(hitVox) {
-            break;
-        }
-        checkChunk = getNeighbourAbove(checkChunk);
-        checkY = 0;
-        stopper += 1;
+        t += 1;
     }
 
-    if(hitVox) {
+    setBrightness(thisChunk, id, int(floor(v * 255)));
+/*
+    if(hitCount > 0) {
         setBrightness(thisChunk, id, 100);
     } else {
         setBrightness(thisChunk, id, 255);
     }
+    */
 }
