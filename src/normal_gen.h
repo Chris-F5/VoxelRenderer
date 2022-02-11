@@ -20,7 +20,15 @@ void NormalGen_init(
     const ChunkGpuStorage* chunkGpuStorage,
     VkDevice logicalDevice,
     VkCommandPool commandPool);
-void NormalGen_generateNormals();
-void NormalGen_destroy();
+void NormalGen_generateNormals(
+    NormalGen* normalGen,
+    VkDevice logicalDevice,
+    VkQueue queue,
+    uint32_t count,
+    ChunkRef* chunks);
+void NormalGen_destroy(
+    NormalGen* normalGen,
+    VkDevice logicalDevice,
+    VkCommandPool commandPool);
 
 #endif

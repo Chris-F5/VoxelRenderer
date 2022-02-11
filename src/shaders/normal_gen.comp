@@ -13,7 +13,7 @@ layout(binding = 0) buffer VoxMask {
 };
 
 layout(binding = 1) buffer Normals {
-    uint normalsData[];
+    uint normalData[];
 };
 
 uint xyzToIndex(uint x, uint y, uint z) {

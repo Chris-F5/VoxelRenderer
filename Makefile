@@ -9,7 +9,12 @@ DEPENDS = $(patsubst ./src/%.c, obj/%.d,$(SRCS))
 
 .PHONY: all run clean debug valgrind
 
-REQUIREDSHADERS = target/vox_tri.vert.spv target/vox_tri.frag.spv target/debug_line.vert.spv target/debug_line.frag.spv target/chunk_lighting.comp.spv
+REQUIREDSHADERS = target/vox_tri.vert.spv \
+				  target/vox_tri.frag.spv \
+				  target/debug_line.vert.spv \
+				  target/debug_line.frag.spv \
+				  target/chunk_lighting.comp.spv \
+				  target/normal_gen.comp.spv
 
 all: target/$(OUTPUTNAME) $(REQUIREDSHADERS) target/object1.ply
 

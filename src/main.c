@@ -11,6 +11,7 @@
 #include "./chunk_lighting.h"
 #include "./chunks.h"
 #include "./models.h"
+#include "./normal_gen.h"
 #include "./pointmap_object_loader.h"
 #include "./renderer.h"
 #include "./utils.h"
@@ -111,6 +112,45 @@ int main()
         ChunkStorageChanges_destroy(&pointmapLoadChunkChanges);
     }
 
+    /* FETCH ALL CHUNK IDS */
+    ChunkRef* allChunks;
+    {
+        ChunkRef chunk;
+        allChunks = (ChunkRef*)malloc(
+            chunkStorage.idAllocator.count * sizeof(ChunkRef));
+        uint32_t i = 0;
+        if (IdAllocator_first(&chunkStorage.idAllocator, &chunk))
+            do {
+                if (i >= chunkStorage.idAllocator.count) {
+                    puts("chunk id allocator count does not match iterator (<). exiting");
+                    exit(EXIT_FAILURE);
+                }
+                allChunks[i] = chunk;
+                i += 1;
+            } while (IdAllocator_next(&chunkStorage.idAllocator, chunk, &chunk));
+        if (i < chunkStorage.idAllocator.count) {
+            puts("chunk id allocator count does not match iterator (>). exiting");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    /* CHUNK NORMAL GEN */
+    NormalGen normalGen;
+    {
+        NormalGen_init(
+            &normalGen,
+            &chunkGpuStorage,
+            device.logical,
+            device.transientGraphicsCommandPool);
+
+        NormalGen_generateNormals(
+            &normalGen,
+            device.logical,
+            device.graphicsQueue,
+            chunkStorage.idAllocator.count,
+            allChunks);
+    }
+
     /* CHUNK LIGHTING */
     ChunkLighting chunkLighting;
     {
@@ -123,31 +163,12 @@ int main()
 
         /* UPDATE CHUNK LIGHTING */
 
-        ChunkRef chunk;
-        ChunkRef* chunksToUpdate
-            = (ChunkRef*)malloc(chunkStorage.idAllocator.count * sizeof(ChunkRef));
-        uint32_t i = 0;
-        if (IdAllocator_first(&chunkStorage.idAllocator, &chunk))
-            do {
-                if (chunkStorage.idAllocator.count <= i) {
-                    puts("chunk id allocator count does not match iterator (<). exiting");
-                    exit(EXIT_FAILURE);
-                }
-                chunksToUpdate[i] = chunk;
-                i += 1;
-            } while (IdAllocator_next(&chunkStorage.idAllocator, chunk, &chunk));
-        if (chunkStorage.idAllocator.count > i) {
-            puts("chunk id allocator count does not match iterator (>). exiting");
-            exit(EXIT_FAILURE);
-        }
         ChunkLighting_updateChunks(
             &chunkLighting,
             device.logical,
             device.graphicsQueue,
             chunkStorage.idAllocator.count,
-            chunksToUpdate);
-            
-        free(chunksToUpdate);
+            allChunks);
     }
 
     /* GENERATE CHUNK MESHES */
@@ -210,6 +231,8 @@ int main()
         camera.yaw = 225;
         camera.pitch = -20;
     }
+
+    free(allChunks);
 
     /* MAIN LOOP */
     while (!glfwWindowShouldClose(window)) {
