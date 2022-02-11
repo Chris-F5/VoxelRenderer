@@ -455,6 +455,15 @@ void ChunkGpuStorage_init(
     createBuffer(
         logicalDevice,
         physicalDevice,
+        CHUNK_CAPACITY * sizeof(uint32_t[CHUNK_VOX_COUNT]),
+        0,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        &storage->normals,
+        &storage->normalsMemory);
+    createBuffer(
+        logicalDevice,
+        physicalDevice,
         CHUNK_CAPACITY * sizeof(ChunkRef[6]),
         0,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
@@ -517,6 +526,8 @@ void ChunkGpuStorage_destroy(
     vkFreeMemory(logicalDevice, storage->colorsMemory, NULL);
     vkDestroyBuffer(logicalDevice, storage->brightness, NULL);
     vkFreeMemory(logicalDevice, storage->brightnessMemory, NULL);
+    vkDestroyBuffer(logicalDevice, storage->normals, NULL);
+    vkFreeMemory(logicalDevice, storage->normalsMemory, NULL);
     vkDestroyBuffer(logicalDevice, storage->neighbours, NULL);
     vkFreeMemory(logicalDevice, storage->neighboursMemory, NULL);
 }

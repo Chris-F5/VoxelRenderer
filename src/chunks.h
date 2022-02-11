@@ -57,6 +57,8 @@ typedef struct {
     VkDeviceMemory voxBitMaskMemory;
     VkBuffer colors;
     VkDeviceMemory colorsMemory;
+    VkBuffer normals;
+    VkDeviceMemory normalsMemory;
     VkBuffer brightness;
     VkDeviceMemory brightnessMemory;
     VkBuffer neighbours;

@@ -1,0 +1,33 @@
+#version 450
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(push_constant) uniform Constants {
+    uint thisChunk;
+    uint CHUNK_SCALE;
+    uint CHUNK_VOX_COUNT;
+};
+
+layout(binding = 0) buffer VoxMask {
+    uint voxMaskData[];
+};
+
+layout(binding = 1) buffer Normals {
+    uint normalsData[];
+};
+
+uint xyzToIndex(uint x, uint y, uint z) {
+    return x
+        + y * CHUNK_SCALE
+        + z * CHUNK_SCALE * CHUNK_SCALE;
+}
+
+void main() {
+    uint x = gl_WorkGroupID.x;
+    uint y = gl_WorkGroupID.y;
+    uint z = gl_WorkGroupID.z;
+
+    uint id = xyzToIndex(x, y, z);
+
+    normalData[id + (thisChunk * CHUNK_VOX_COUNT)] = 1;
+}
