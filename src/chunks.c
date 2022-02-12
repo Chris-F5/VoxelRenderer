@@ -428,7 +428,7 @@ void ChunkGpuStorage_init(
     createBuffer(
         logicalDevice,
         physicalDevice,
-        CHUNK_CAPACITY * sizeof(uint8_t[CHUNK_BIT_MASK_SIZE]),
+        CHUNK_CAPACITY * CHUNK_BIT_MASK_SIZE,
         0,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -455,7 +455,7 @@ void ChunkGpuStorage_init(
     createBuffer(
         logicalDevice,
         physicalDevice,
-        CHUNK_CAPACITY * sizeof(uint32_t[CHUNK_VOX_COUNT]),
+        CHUNK_CAPACITY * CHUNK_VOX_COUNT,
         0,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,

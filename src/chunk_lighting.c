@@ -73,7 +73,7 @@ void ChunkLighting_init(
     {
         VkDescriptorPoolSize poolSize;
         poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        poolSize.descriptorCount = 3;
+        poolSize.descriptorCount = 4;
 
         VkDescriptorPoolCreateInfo poolCreateInfo;
         poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -115,10 +115,18 @@ void ChunkLighting_init(
         chunkNeighbourBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
         chunkNeighbourBinding.pImmutableSamplers = NULL;
 
+        VkDescriptorSetLayoutBinding chunkNormalBinding;
+        chunkNormalBinding.binding = 3;
+        chunkNormalBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        chunkNormalBinding.descriptorCount = 1;
+        chunkNormalBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        chunkNormalBinding.pImmutableSamplers = NULL;
+
         VkDescriptorSetLayoutBinding bindings[] = {
             chunkBrightnessBinding,
             chunkVoxMaskBinding,
-            chunkNeighbourBinding
+            chunkNeighbourBinding,
+            chunkNormalBinding
         };
 
         VkDescriptorSetLayoutCreateInfo layoutCreateInfo;
@@ -197,10 +205,28 @@ void ChunkLighting_init(
         neighbourWrite.pBufferInfo = &neighbourBufferInfo;
         neighbourWrite.pTexelBufferView = NULL;
 
+        VkDescriptorBufferInfo normalBufferInfo;
+        normalBufferInfo.buffer = chunkGpuStorage->normals;
+        normalBufferInfo.offset = 0;
+        normalBufferInfo.range = VK_WHOLE_SIZE;
+
+        VkWriteDescriptorSet normalWrite;
+        normalWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        normalWrite.pNext = NULL;
+        normalWrite.dstSet = lighting->descriptorSet;
+        normalWrite.dstBinding = 3;
+        normalWrite.dstArrayElement = 0;
+        normalWrite.descriptorCount = 1;
+        normalWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        normalWrite.pImageInfo = NULL;
+        normalWrite.pBufferInfo = &normalBufferInfo;
+        normalWrite.pTexelBufferView = NULL;
+
         VkWriteDescriptorSet writes[] = {
             brightnessWrite,
             voxMaskWrite,
-            neighbourWrite
+            neighbourWrite,
+            normalWrite,
         };
 
         vkUpdateDescriptorSets(

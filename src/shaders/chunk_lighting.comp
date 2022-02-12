@@ -12,17 +12,21 @@ layout(push_constant) uniform Constants {
 layout(binding = 0) buffer Brightness {
     uint brightnessData[];
 };
-
 layout(binding = 1) buffer VoxMask {
     uint voxMaskData[];
 };
-
 layout(binding = 2) buffer Neighbours {
     uint neighboursData[];
+};
+layout(binding = 0) buffer Normals {
+    uint normalData[];
 };
 
 void setBrightness(uint chunk, uint index, uint brightness) {
     brightnessData[index + (chunk * CHUNK_VOX_COUNT)] = brightness * 256 * 256 * 256;
+}
+uint getNormal(uint chunk, uint index) {
+    return (normalData[index / 4] >> (index % 4) * 8) & 0xFF;
 }
 
 uint testVox(uint chunk, uint index) {
