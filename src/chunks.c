@@ -8,14 +8,6 @@
 #include "./vert_gen.h"
 #include "./vk_utils/buffer.h"
 
-const ChunkRef CHUNK_NEIGHBOUR_EMPTY = ~0;
-const int CHUNK_NEGATIVE_X_NEIGHBOUR = 0;
-const int CHUNK_NEGATIVE_Y_NEIGHBOUR = 1;
-const int CHUNK_NEGATIVE_Z_NEIGHBOUR = 2;
-const int CHUNK_POSITIVE_X_NEIGHBOUR = 3;
-const int CHUNK_POSITIVE_Y_NEIGHBOUR = 4;
-const int CHUNK_POSITIVE_Z_NEIGHBOUR = 5;
-
 static const unsigned int CHUNK_CAPACITY = 10000;
 
 /* CHUNK STORAGE METHODS */
@@ -62,7 +54,7 @@ void ChunkStorage_add(
         memset(&storage->voxBitMask[chunks[i]], 0, CHUNK_BIT_MASK_SIZE);
         memset(storage->colors[chunks[i]], 0, CHUNK_VOX_COUNT);
         for (int n = 0; n < 6; n++)
-            storage->neighbours[chunks[i]][n] = CHUNK_NEIGHBOUR_EMPTY;
+            storage->neighbours[chunks[i]][n] = NEIGHBOUR_EMPTY;
         storage->positions[chunks[i]][0] = positions[i][0];
         storage->positions[chunks[i]][1] = positions[i][1];
         storage->positions[chunks[i]][2] = positions[i][2];
@@ -84,9 +76,9 @@ void ChunkStorage_add(
             pos[2] = positions[i][2];
             ChunkRef neighbour;
             if (ChunkStorage_findChunkFromPos(storage, pos, &neighbour)) {
-                storage->neighbours[chunks[i]][CHUNK_NEGATIVE_X_NEIGHBOUR]
+                storage->neighbours[chunks[i]][NEIGHBOUR_NEGATIVE_X]
                     = neighbour;
-                storage->neighbours[neighbour][CHUNK_POSITIVE_X_NEIGHBOUR]
+                storage->neighbours[neighbour][NEIGHBOUR_POSITIVE_X]
                     = chunks[i];
                 ChunkStorageChanges_addNeighbourChanges(
                     storageChanges,
@@ -101,9 +93,9 @@ void ChunkStorage_add(
             pos[2] = positions[i][2];
             ChunkRef neighbour;
             if (ChunkStorage_findChunkFromPos(storage, pos, &neighbour)) {
-                storage->neighbours[chunks[i]][CHUNK_NEGATIVE_Y_NEIGHBOUR]
+                storage->neighbours[chunks[i]][NEIGHBOUR_NEGATIVE_Y]
                     = neighbour;
-                storage->neighbours[neighbour][CHUNK_POSITIVE_Y_NEIGHBOUR]
+                storage->neighbours[neighbour][NEIGHBOUR_POSITIVE_Y]
                     = chunks[i];
                 ChunkStorageChanges_addNeighbourChanges(
                     storageChanges,
@@ -118,9 +110,9 @@ void ChunkStorage_add(
             pos[2] = positions[i][2] - 1;
             ChunkRef neighbour;
             if (ChunkStorage_findChunkFromPos(storage, pos, &neighbour)) {
-                storage->neighbours[chunks[i]][CHUNK_NEGATIVE_Z_NEIGHBOUR]
+                storage->neighbours[chunks[i]][NEIGHBOUR_NEGATIVE_Z]
                     = neighbour;
-                storage->neighbours[neighbour][CHUNK_POSITIVE_Z_NEIGHBOUR]
+                storage->neighbours[neighbour][NEIGHBOUR_POSITIVE_Z]
                     = chunks[i];
                 ChunkStorageChanges_addNeighbourChanges(
                     storageChanges,
@@ -135,9 +127,9 @@ void ChunkStorage_add(
             pos[2] = positions[i][2];
             ChunkRef neighbour;
             if (ChunkStorage_findChunkFromPos(storage, pos, &neighbour)) {
-                storage->neighbours[chunks[i]][CHUNK_POSITIVE_X_NEIGHBOUR]
+                storage->neighbours[chunks[i]][NEIGHBOUR_POSITIVE_X]
                     = neighbour;
-                storage->neighbours[neighbour][CHUNK_NEGATIVE_X_NEIGHBOUR]
+                storage->neighbours[neighbour][NEIGHBOUR_NEGATIVE_X]
                     = chunks[i];
                 ChunkStorageChanges_addNeighbourChanges(
                     storageChanges,
@@ -152,9 +144,9 @@ void ChunkStorage_add(
             pos[2] = positions[i][2];
             ChunkRef neighbour;
             if (ChunkStorage_findChunkFromPos(storage, pos, &neighbour)) {
-                storage->neighbours[chunks[i]][CHUNK_POSITIVE_Y_NEIGHBOUR]
+                storage->neighbours[chunks[i]][NEIGHBOUR_POSITIVE_Y]
                     = neighbour;
-                storage->neighbours[neighbour][CHUNK_NEGATIVE_Y_NEIGHBOUR]
+                storage->neighbours[neighbour][NEIGHBOUR_NEGATIVE_Y]
                     = chunks[i];
                 ChunkStorageChanges_addNeighbourChanges(
                     storageChanges,
@@ -169,9 +161,9 @@ void ChunkStorage_add(
             pos[2] = positions[i][2] + 1;
             ChunkRef neighbour;
             if (ChunkStorage_findChunkFromPos(storage, pos, &neighbour)) {
-                storage->neighbours[chunks[i]][CHUNK_POSITIVE_Z_NEIGHBOUR]
+                storage->neighbours[chunks[i]][NEIGHBOUR_POSITIVE_Z]
                     = neighbour;
-                storage->neighbours[neighbour][CHUNK_NEGATIVE_Z_NEIGHBOUR]
+                storage->neighbours[neighbour][NEIGHBOUR_NEGATIVE_Z]
                     = chunks[i];
                 ChunkStorageChanges_addNeighbourChanges(
                     storageChanges,
@@ -195,59 +187,59 @@ void ChunkStorage_remove(
 {
     for (uint32_t i = 0; i < count; i++) {
         ChunkRef* neighbours = storage->neighbours[chunks[i]];
-        if (neighbours[CHUNK_NEGATIVE_X_NEIGHBOUR] != CHUNK_NEIGHBOUR_EMPTY) {
-            storage->neighbours[neighbours[CHUNK_NEGATIVE_X_NEIGHBOUR]]
-                               [CHUNK_POSITIVE_X_NEIGHBOUR]
-                = CHUNK_NEIGHBOUR_EMPTY;
+        if (neighbours[NEIGHBOUR_NEGATIVE_X] != NEIGHBOUR_EMPTY) {
+            storage->neighbours[neighbours[NEIGHBOUR_NEGATIVE_X]]
+                               [NEIGHBOUR_POSITIVE_X]
+                = NEIGHBOUR_EMPTY;
             ChunkStorageChanges_addNeighbourChanges(
                 storageChanges,
                 1,
-                &neighbours[CHUNK_NEGATIVE_X_NEIGHBOUR]);
+                &neighbours[NEIGHBOUR_NEGATIVE_X]);
         }
-        if (neighbours[CHUNK_NEGATIVE_Y_NEIGHBOUR] != CHUNK_NEIGHBOUR_EMPTY) {
-            storage->neighbours[neighbours[CHUNK_NEGATIVE_Y_NEIGHBOUR]]
-                               [CHUNK_POSITIVE_Y_NEIGHBOUR]
-                = CHUNK_NEIGHBOUR_EMPTY;
+        if (neighbours[NEIGHBOUR_NEGATIVE_Y] != NEIGHBOUR_EMPTY) {
+            storage->neighbours[neighbours[NEIGHBOUR_NEGATIVE_Y]]
+                               [NEIGHBOUR_POSITIVE_Y]
+                = NEIGHBOUR_EMPTY;
             ChunkStorageChanges_addNeighbourChanges(
                 storageChanges,
                 1,
-                &neighbours[CHUNK_NEGATIVE_Y_NEIGHBOUR]);
+                &neighbours[NEIGHBOUR_NEGATIVE_Y]);
         }
-        if (neighbours[CHUNK_NEGATIVE_Z_NEIGHBOUR] != CHUNK_NEIGHBOUR_EMPTY) {
-            storage->neighbours[neighbours[CHUNK_NEGATIVE_Z_NEIGHBOUR]]
-                               [CHUNK_POSITIVE_Z_NEIGHBOUR]
-                = CHUNK_NEIGHBOUR_EMPTY;
+        if (neighbours[NEIGHBOUR_NEGATIVE_Z] != NEIGHBOUR_EMPTY) {
+            storage->neighbours[neighbours[NEIGHBOUR_NEGATIVE_Z]]
+                               [NEIGHBOUR_POSITIVE_Z]
+                = NEIGHBOUR_EMPTY;
             ChunkStorageChanges_addNeighbourChanges(
                 storageChanges,
                 1,
-                &neighbours[CHUNK_NEGATIVE_Z_NEIGHBOUR]);
+                &neighbours[NEIGHBOUR_NEGATIVE_Z]);
         }
-        if (neighbours[CHUNK_POSITIVE_X_NEIGHBOUR] != CHUNK_NEIGHBOUR_EMPTY) {
-            storage->neighbours[neighbours[CHUNK_POSITIVE_X_NEIGHBOUR]]
-                               [CHUNK_NEGATIVE_X_NEIGHBOUR]
-                = CHUNK_NEIGHBOUR_EMPTY;
+        if (neighbours[NEIGHBOUR_POSITIVE_X] != NEIGHBOUR_EMPTY) {
+            storage->neighbours[neighbours[NEIGHBOUR_POSITIVE_X]]
+                               [NEIGHBOUR_NEGATIVE_X]
+                = NEIGHBOUR_EMPTY;
             ChunkStorageChanges_addNeighbourChanges(
                 storageChanges,
                 1,
-                &neighbours[CHUNK_POSITIVE_X_NEIGHBOUR]);
+                &neighbours[NEIGHBOUR_POSITIVE_X]);
         }
-        if (neighbours[CHUNK_POSITIVE_Y_NEIGHBOUR] != CHUNK_NEIGHBOUR_EMPTY) {
-            storage->neighbours[neighbours[CHUNK_POSITIVE_Y_NEIGHBOUR]]
-                               [CHUNK_NEGATIVE_Y_NEIGHBOUR]
-                = CHUNK_NEIGHBOUR_EMPTY;
+        if (neighbours[NEIGHBOUR_POSITIVE_Y] != NEIGHBOUR_EMPTY) {
+            storage->neighbours[neighbours[NEIGHBOUR_POSITIVE_Y]]
+                               [NEIGHBOUR_NEGATIVE_Y]
+                = NEIGHBOUR_EMPTY;
             ChunkStorageChanges_addNeighbourChanges(
                 storageChanges,
                 1,
-                &neighbours[CHUNK_POSITIVE_Y_NEIGHBOUR]);
+                &neighbours[NEIGHBOUR_POSITIVE_Y]);
         }
-        if (neighbours[CHUNK_POSITIVE_Z_NEIGHBOUR] != CHUNK_NEIGHBOUR_EMPTY) {
-            storage->neighbours[neighbours[CHUNK_POSITIVE_Z_NEIGHBOUR]]
-                               [CHUNK_NEGATIVE_Z_NEIGHBOUR]
-                = CHUNK_NEIGHBOUR_EMPTY;
+        if (neighbours[NEIGHBOUR_POSITIVE_Z] != NEIGHBOUR_EMPTY) {
+            storage->neighbours[neighbours[NEIGHBOUR_POSITIVE_Z]]
+                               [NEIGHBOUR_NEGATIVE_Z]
+                = NEIGHBOUR_EMPTY;
             ChunkStorageChanges_addNeighbourChanges(
                 storageChanges,
                 1,
-                &neighbours[CHUNK_POSITIVE_Z_NEIGHBOUR]);
+                &neighbours[NEIGHBOUR_POSITIVE_Z]);
         }
     }
     IdAllocator_remove(&storage->idAllocator, count, chunks);

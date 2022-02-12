@@ -5,6 +5,13 @@
 
 #include "./chunks.h"
 
+#define NORMAL_X_POS 0
+#define NORMAL_X_NEG 1
+#define NORMAL_Y_POS 2
+#define NORMAL_Y_NEG 3
+#define NORMAL_Z_POS 4
+#define NORMAL_Z_NEG 5
+
 typedef struct {
     VkDescriptorPool descriptorPool;
     VkDescriptorSetLayout descriptorSetLayout;

@@ -13,15 +13,15 @@
 #define CHUNK_VOX_COUNT (CHUNK_SCALE * CHUNK_SCALE * CHUNK_SCALE)
 #define CHUNK_BIT_MASK_SIZE ((CHUNK_VOX_COUNT + 7) / 8)
 
-typedef uint32_t ChunkRef;
+#define NEIGHBOUR_EMPTY ~0
+#define NEIGHBOUR_NEGATIVE_X 0
+#define NEIGHBOUR_NEGATIVE_Y 1
+#define NEIGHBOUR_NEGATIVE_Z 2
+#define NEIGHBOUR_POSITIVE_X 3
+#define NEIGHBOUR_POSITIVE_Y 4
+#define NEIGHBOUR_POSITIVE_Z 5
 
-extern const ChunkRef CHUNK_NEIGHBOUR_EMPTY;
-extern const int CHUNK_NEGATIVE_X_NEIGHBOUR;
-extern const int CHUNK_NEGATIVE_Y_NEIGHBOUR;
-extern const int CHUNK_NEGATIVE_Z_NEIGHBOUR;
-extern const int CHUNK_POSITIVE_X_NEIGHBOUR;
-extern const int CHUNK_POSITIVE_Y_NEIGHBOUR;
-extern const int CHUNK_POSITIVE_Z_NEIGHBOUR;
+typedef uint32_t ChunkRef;
 
 typedef struct {
     IdAllocator idAllocator;
@@ -31,7 +31,7 @@ typedef struct {
      * 'neighbours' contains the neighbours of each chunk in the order:
      * negative x, negative y, negative z,
      * positive x, positive y, positive z
-     * if a neighbour does not exist, then its value is 'CHUNK_NEIGHBOUR_EMPTY'
+     * if a neighbour does not exist, then its value is 'NEIGHBOUR_EMPTY'
      */
     ChunkRef (*neighbours)[6];
     ivec3* positions;

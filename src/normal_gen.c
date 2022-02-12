@@ -73,7 +73,7 @@ void NormalGen_init(
     {
         VkDescriptorPoolSize poolSize;
         poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        poolSize.descriptorCount = 2;
+        poolSize.descriptorCount = 3;
 
         VkDescriptorPoolCreateInfo poolCreateInfo;
         poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -108,9 +108,17 @@ void NormalGen_init(
         chunkNormalBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
         chunkNormalBinding.pImmutableSamplers = NULL;
 
+        VkDescriptorSetLayoutBinding chunkNeighbourBinding;
+        chunkNeighbourBinding.binding = 2;
+        chunkNeighbourBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        chunkNeighbourBinding.descriptorCount = 1;
+        chunkNeighbourBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        chunkNeighbourBinding.pImmutableSamplers = NULL;
+
         VkDescriptorSetLayoutBinding bindings[] = {
             chunkVoxMaskBinding,
             chunkNormalBinding,
+            chunkNeighbourBinding,
         };
 
         VkDescriptorSetLayoutCreateInfo layoutCreateInfo;
@@ -156,7 +164,7 @@ void NormalGen_init(
         voxMaskWrite.pTexelBufferView = NULL;
 
         VkDescriptorBufferInfo normalBufferInfo;
-        normalBufferInfo.buffer = chunkGpuStorage->neighbours;
+        normalBufferInfo.buffer = chunkGpuStorage->normals;
         normalBufferInfo.offset = 0;
         normalBufferInfo.range = VK_WHOLE_SIZE;
 
@@ -172,9 +180,27 @@ void NormalGen_init(
         normalWrite.pBufferInfo = &normalBufferInfo;
         normalWrite.pTexelBufferView = NULL;
 
+        VkDescriptorBufferInfo neighbourBufferInfo;
+        neighbourBufferInfo.buffer = chunkGpuStorage->neighbours;
+        neighbourBufferInfo.offset = 0;
+        neighbourBufferInfo.range = VK_WHOLE_SIZE;
+
+        VkWriteDescriptorSet neighbourWrite;
+        neighbourWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        neighbourWrite.pNext = NULL;
+        neighbourWrite.dstSet = normalGen->descriptorSet;
+        neighbourWrite.dstBinding = 2;
+        neighbourWrite.dstArrayElement = 0;
+        neighbourWrite.descriptorCount = 1;
+        neighbourWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        neighbourWrite.pImageInfo = NULL;
+        neighbourWrite.pBufferInfo = &neighbourBufferInfo;
+        neighbourWrite.pTexelBufferView = NULL;
+
         VkWriteDescriptorSet writes[] = {
             voxMaskWrite,
             normalWrite,
+            neighbourWrite,
         };
 
         vkUpdateDescriptorSets(

@@ -246,6 +246,15 @@ int main()
     }
     vkDeviceWaitIdle(device.logical);
 
+    NormalGen_destroy(
+        &normalGen,
+        device.logical,
+        device.transientGraphicsCommandPool);
+    ChunkLighting_destroy(
+        &chunkLighting,
+        device.logical,
+        device.transientGraphicsCommandPool);
+    ChunkVertGen_destroy(&vertGen);
     ChunkStorage_destroy(&chunkStorage);
     ChunkGpuStorage_destroy(&chunkGpuStorage, device.logical);
     VoxPaletteStorage_destroy(&paletteStorage);

@@ -1,5 +1,20 @@
 #version 450
 
+#define NEIGHBOUR_EMPTY ~0
+#define NEIGHBOUR_NEGATIVE_X 0
+#define NEIGHBOUR_NEGATIVE_Y 1
+#define NEIGHBOUR_NEGATIVE_Z 2
+#define NEIGHBOUR_POSITIVE_X 3
+#define NEIGHBOUR_POSITIVE_Y 4
+#define NEIGHBOUR_POSITIVE_Z 5
+
+#define NORMAL_X_POS 0
+#define NORMAL_X_NEG 1
+#define NORMAL_Y_POS 2
+#define NORMAL_Y_NEG 3
+#define NORMAL_Z_POS 4
+#define NORMAL_Z_NEG 5
+
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 layout(push_constant) uniform Constants {
@@ -11,10 +26,25 @@ layout(push_constant) uniform Constants {
 layout(binding = 0) buffer VoxMask {
     uint voxMaskData[];
 };
-
 layout(binding = 1) buffer Normals {
     uint normalData[];
 };
+layout(binding = 2) buffer Neighbours {
+    uint neighboursData[];
+};
+
+uint getNeighbour(uint chunk, uint neighbourDir) {
+    return neighboursData[chunk * 6 + neighbourDir];
+}
+
+uint testVox(uint chunk, uint index) {
+    return voxMaskData[index / 32 + (chunk * CHUNK_VOX_COUNT / 32)] & (1 << index % 32);
+}
+
+void setNormal(uint id, uint normal) {
+    uint shiftedNormal = normal << (id % 4) * 8;
+    atomicOr(normalData[id / 4 + (thisChunk * CHUNK_VOX_COUNT / 4)], shiftedNormal);
+}
 
 uint xyzToIndex(uint x, uint y, uint z) {
     return x
@@ -27,7 +57,86 @@ void main() {
     uint y = gl_WorkGroupID.y;
     uint z = gl_WorkGroupID.z;
 
-    uint id = xyzToIndex(x, y, z);
+    uint thisId = xyzToIndex(x, y, z);
 
-    normalData[id + (thisChunk * CHUNK_VOX_COUNT)] = 1;
+    uint adjacentMask = 0;
+    uint adjId;
+    uint adjChunk;
+    if (x == 0) {
+        adjChunk = getNeighbour(thisChunk, NEIGHBOUR_NEGATIVE_X);
+        adjId = xyzToIndex(CHUNK_SCALE - 1, y, z);
+    } else {
+        adjChunk = thisChunk;
+        adjId = xyzToIndex(x - 1, y, z);
+    }
+    if (adjChunk == NEIGHBOUR_EMPTY || testVox(adjChunk, adjId) == 0) {
+        adjacentMask |= 1;
+    }
+    if (y == 0) {
+        adjChunk = getNeighbour(thisChunk, NEIGHBOUR_NEGATIVE_Y);
+        adjId = xyzToIndex(x, CHUNK_SCALE - 1, z);
+    } else {
+        adjChunk = thisChunk;
+        adjId = xyzToIndex(x, y - 1, z);
+    }
+    if (adjChunk == NEIGHBOUR_EMPTY || testVox(adjChunk, adjId) == 0) {
+        adjacentMask |= 2;
+    }
+    if (z == 0) {
+        adjChunk = getNeighbour(thisChunk, NEIGHBOUR_NEGATIVE_Z);
+        adjId = xyzToIndex(x, y, CHUNK_SCALE - 1);
+    } else {
+        adjChunk = thisChunk;
+        adjId = xyzToIndex(x, y, z - 1);
+    }
+    if (adjChunk == NEIGHBOUR_EMPTY || testVox(adjChunk, adjId) == 0) {
+        adjacentMask |= 4;
+    }
+    if (x == CHUNK_SCALE - 1) {
+        adjChunk = getNeighbour(thisChunk, NEIGHBOUR_POSITIVE_X);
+        adjId = xyzToIndex(0, y, z);
+    } else {
+        adjChunk = thisChunk;
+        adjId = xyzToIndex(x + 1, y, z);
+    }
+    if (adjChunk == NEIGHBOUR_EMPTY || testVox(adjChunk, adjId) == 0) {
+        adjacentMask |= 8;
+    }
+    if (y == CHUNK_SCALE - 1) {
+        adjChunk = getNeighbour(thisChunk, NEIGHBOUR_POSITIVE_Y);
+        adjId = xyzToIndex(x, 0, z);
+    } else {
+        adjChunk = thisChunk;
+        adjId = xyzToIndex(x, y + 1, z);
+    }
+    if (adjChunk == NEIGHBOUR_EMPTY || testVox(adjChunk, adjId) == 0) {
+        adjacentMask |= 16;
+    }
+    if (z == CHUNK_SCALE - 1) {
+        adjChunk = getNeighbour(thisChunk, NEIGHBOUR_POSITIVE_Z);
+        adjId = xyzToIndex(x, y, 0);
+    } else {
+        adjChunk = thisChunk;
+        adjId = xyzToIndex(x, y, z + 1);
+    }
+    if (adjChunk == NEIGHBOUR_EMPTY || testVox(adjChunk, adjId) == 0) {
+        adjacentMask |= 32;
+    }
+
+    uint normal = NORMAL_Y_NEG;
+    if ((adjacentMask & 1) != 0) {
+        normal = NORMAL_X_NEG;
+    } else if((adjacentMask & 2) != 0) {
+        normal = NORMAL_Y_NEG;
+    } else if((adjacentMask & 4) != 0) {
+        normal = NORMAL_Z_NEG;
+    } else if((adjacentMask & 8) != 0) {
+        normal = NORMAL_X_POS;
+    } else if((adjacentMask & 16) != 0) {
+        normal = NORMAL_Y_POS;
+    } else if((adjacentMask & 32) != 0) {
+        normal = NORMAL_Z_POS;
+    }
+
+    setNormal(thisId, normal);
 }

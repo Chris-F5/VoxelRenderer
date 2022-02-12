@@ -1,5 +1,19 @@
 #version 450
-#define NEIGHBOUR_NONE ~0
+
+#define NEIGHBOUR_EMPTY ~0
+#define NEIGHBOUR_NEGATIVE_X 0
+#define NEIGHBOUR_NEGATIVE_Y 1
+#define NEIGHBOUR_NEGATIVE_Z 2
+#define NEIGHBOUR_POSITIVE_X 3
+#define NEIGHBOUR_POSITIVE_Y 4
+#define NEIGHBOUR_POSITIVE_Z 5
+
+#define NORMAL_X_POS 0
+#define NORMAL_X_NEG 1
+#define NORMAL_Y_POS 2
+#define NORMAL_Y_NEG 3
+#define NORMAL_Z_POS 4
+#define NORMAL_Z_NEG 5
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
@@ -18,7 +32,7 @@ layout(binding = 1) buffer VoxMask {
 layout(binding = 2) buffer Neighbours {
     uint neighboursData[];
 };
-layout(binding = 0) buffer Normals {
+layout(binding = 3) buffer Normals {
     uint normalData[];
 };
 
@@ -26,18 +40,15 @@ void setBrightness(uint chunk, uint index, uint brightness) {
     brightnessData[index + (chunk * CHUNK_VOX_COUNT)] = brightness * 256 * 256 * 256;
 }
 uint getNormal(uint chunk, uint index) {
-    return (normalData[index / 4] >> (index % 4) * 8) & 0xFF;
+    return (normalData[index / 4 + (chunk * CHUNK_VOX_COUNT / 4)] >> (index % 4) * 8) & 0xFF;
 }
 
 uint testVox(uint chunk, uint index) {
     return voxMaskData[index / 32 + (chunk * CHUNK_VOX_COUNT / 32)] & (1 << index % 32);
 }
 
-uint getNeighbourAbove(uint chunk) {
-    return neighboursData[chunk * 6 + 4];
-}
-uint getNeighbourRight(uint chunk) {
-    return neighboursData[chunk * 6 + 3];
+uint getNeighbour(uint chunk, uint neighbourDir) {
+    return neighboursData[chunk * 6 + neighbourDir];
 }
 
 uint xyzToIndex(uint x, uint y, uint z) {
@@ -68,8 +79,8 @@ void main() {
             y += 1;
             if (y >= CHUNK_SCALE) { 
                 y = 0;
-                checkChunk = getNeighbourAbove(checkChunk);
-                if (checkChunk == NEIGHBOUR_NONE) {
+                checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_Y);
+                if (checkChunk == NEIGHBOUR_EMPTY) {
                     break;
                 }
             }
@@ -78,8 +89,8 @@ void main() {
             x += 1;
             if (x >= CHUNK_SCALE) { 
                 x = 0;
-                checkChunk = getNeighbourRight(checkChunk);
-                if (checkChunk == NEIGHBOUR_NONE) {
+                checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_X);
+                if (checkChunk == NEIGHBOUR_EMPTY) {
                     break;
                 }
             }
@@ -95,12 +106,11 @@ void main() {
         t += 1;
     }
 
-    setBrightness(thisChunk, id, int(floor(v * 255)));
-/*
-    if(hitCount > 0) {
-        setBrightness(thisChunk, id, 100);
-    } else {
+    uint normal = getNormal(thisChunk, id);
+    //setBrightness(thisChunk, id, int(floor(v * 255)));
+    if (normal == NORMAL_Y_POS) {
         setBrightness(thisChunk, id, 255);
+    } else {
+        setBrightness(thisChunk, id, 0);
     }
-    */
 }
