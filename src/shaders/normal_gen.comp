@@ -100,10 +100,6 @@ void main() {
             }
         }
     }
-
-    if (preciseNormal.y > 0) {
-        setNormal(thisId, NORMAL_Y_POS);
-    } else {
-        setNormal(thisId, NORMAL_Y_NEG);
-    }
+    uint quantizedNormal = quantizeNormal(preciseNormal);
+    setNormal(thisId, quantizedNormal);
 }

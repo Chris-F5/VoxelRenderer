@@ -28,7 +28,7 @@ void setBrightness(uint chunk, uint index, uint brightness)
     brightnessData[index + (chunk * CHUNK_VOX_COUNT)] = brightness * 256 * 256 * 256;
 }
 
-uint getNormal(uint chunk, uint index)
+uint getQuantizedNormal(uint chunk, uint index)
 {
     return (normalData[index / 4 + (chunk * CHUNK_VOX_COUNT / 4)] >> (index % 4) * 8) & 0xFF;
 }
@@ -99,11 +99,21 @@ void main() {
         t += 1;
     }
 
-    uint normal = getNormal(thisChunk, id);
+    uint quantizedNormal = getQuantizedNormal(thisChunk, id);
+    vec3 normal = normalPalette[quantizedNormal];
+    vec3 lightDir = vec3(-dx, -dy, 0);
+    lightDir = normalize(lightDir);
+    float normalLightingCompoent = -dot(normal, lightDir);
+    normalLightingCompoent = max(0, normalLightingCompoent);
+    uint light = int(round(normalLightingCompoent * 255));
+    setBrightness(thisChunk, id, light);
+
     //setBrightness(thisChunk, id, int(floor(v * 255)));
+    /*
     if (normal == NORMAL_Y_POS) {
         setBrightness(thisChunk, id, 255);
     } else {
         setBrightness(thisChunk, id, 0);
     }
+    */
 }
