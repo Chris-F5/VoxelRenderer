@@ -52,6 +52,6 @@ def generate_cube(f, s):
 
 f = open("object1.ply", "w")
 write_header(f)
-#generate_3d_noise(f, 128, 128, 128, 10)
-generate_cube(f, 32)
+generate_3d_noise(f, 128, 128, 128, 10)
+#generate_cube(f, 32)
 f.close()

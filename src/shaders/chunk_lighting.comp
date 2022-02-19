@@ -1,19 +1,6 @@
 #version 450
 
-#define NEIGHBOUR_EMPTY ~0
-#define NEIGHBOUR_NEGATIVE_X 0
-#define NEIGHBOUR_NEGATIVE_Y 1
-#define NEIGHBOUR_NEGATIVE_Z 2
-#define NEIGHBOUR_POSITIVE_X 3
-#define NEIGHBOUR_POSITIVE_Y 4
-#define NEIGHBOUR_POSITIVE_Z 5
-
-#define NORMAL_X_POS 0
-#define NORMAL_X_NEG 1
-#define NORMAL_Y_POS 2
-#define NORMAL_Y_NEG 3
-#define NORMAL_Z_POS 4
-#define NORMAL_Z_NEG 5
+#include "chunk.glsl"
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
@@ -36,22 +23,28 @@ layout(binding = 3) buffer Normals {
     uint normalData[];
 };
 
-void setBrightness(uint chunk, uint index, uint brightness) {
+void setBrightness(uint chunk, uint index, uint brightness)
+{
     brightnessData[index + (chunk * CHUNK_VOX_COUNT)] = brightness * 256 * 256 * 256;
 }
-uint getNormal(uint chunk, uint index) {
+
+uint getNormal(uint chunk, uint index)
+{
     return (normalData[index / 4 + (chunk * CHUNK_VOX_COUNT / 4)] >> (index % 4) * 8) & 0xFF;
 }
 
-uint testVox(uint chunk, uint index) {
+uint testVox(uint chunk, uint index)
+{
     return voxMaskData[index / 32 + (chunk * CHUNK_VOX_COUNT / 32)] & (1 << index % 32);
 }
 
-uint getNeighbour(uint chunk, uint neighbourDir) {
+uint getNeighbour(uint chunk, uint neighbourDir)
+{
     return neighboursData[chunk * 6 + neighbourDir];
 }
 
-uint xyzToIndex(uint x, uint y, uint z) {
+uint xyzToIndex(uint x, uint y, uint z)
+{
     return x
         + y * CHUNK_SCALE
         + z * CHUNK_SCALE * CHUNK_SCALE;
