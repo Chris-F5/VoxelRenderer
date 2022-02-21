@@ -17,6 +17,7 @@
 #include "./utils.h"
 #include "./vert_gen.h"
 #include "./vulkan_device.h"
+#include "./sparse_vox_object_loader.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -85,31 +86,15 @@ int main()
     {
         ChunkStorage_init(&chunkStorage);
         ChunkGpuStorage_init(&chunkGpuStorage, device.logical, device.physical);
-
-        ChunkStorageChanges pointmapLoadChunkChanges;
-        ChunkStorageChanges_init(
-            &pointmapLoadChunkChanges,
-            400,
-            400,
-            400);
-        {
-            FILE* pointmapFile = fopen("object1.ply", "r");
-            loadChunksFromPointmapFile(
-                &chunkStorage,
-                &pointmapLoadChunkChanges,
-                &paletteStorage,
-                chunkPalette,
-                pointmapFile);
-            fclose(pointmapFile);
-        }
-
-        ChunkGpuStorage_update(
-            &chunkGpuStorage,
+        FILE* svoFile = fopen("object1.svo", "r");
+        loadChunksFromSparseVoxFile(
             device.logical,
             &chunkStorage,
-            &pointmapLoadChunkChanges);
-
-        ChunkStorageChanges_destroy(&pointmapLoadChunkChanges);
+            &chunkGpuStorage,
+            &paletteStorage,
+            chunkPalette,
+            svoFile);
+        fclose(svoFile);
     }
 
     /* FETCH ALL CHUNK IDS */
@@ -143,12 +128,14 @@ int main()
             device.logical,
             device.transientGraphicsCommandPool);
 
+        /*
         NormalGen_generateNormals(
             &normalGen,
             device.logical,
             device.graphicsQueue,
             chunkStorage.idAllocator.count,
             allChunks);
+        */
     }
 
     /* CHUNK LIGHTING */

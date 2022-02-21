@@ -1,0 +1,5 @@
+CHUNK_SCALE=32
+
+CHUNK x y z
+20
+2 48

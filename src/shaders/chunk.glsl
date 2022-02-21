@@ -136,7 +136,6 @@ const vec3 normalPalette[] = {
 
 uint quantizeNormal(vec3 v)
 {
-    /* set magnitude to 2 */
     float m = sqrt(pow(v.x, 2) + pow(v.y, 2) + pow(v.z, 2));
 
     if (m == 0) {

@@ -18,7 +18,7 @@ REQUIREDSHADERS = target/vox_tri.vert.spv \
 
 SHADERLIBS = src/shaders/chunk.glsl
 
-all: target/$(OUTPUTNAME) $(REQUIREDSHADERS) target/object1.ply
+all: target/$(OUTPUTNAME) $(REQUIREDSHADERS) target/object1.ply target/object1.svo
 
 -include $(DEPENDS)
 
@@ -38,6 +38,10 @@ target/%.voxobj: %.voxobj
 	cp $< $@
 
 target/%.ply: %.ply
+	mkdir -p target
+	cp $< $@
+
+target/%.svo: %.svo
 	mkdir -p target
 	cp $< $@
 
