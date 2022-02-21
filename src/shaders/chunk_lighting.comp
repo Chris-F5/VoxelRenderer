@@ -51,7 +51,8 @@ uint xyzToIndex(uint x, uint y, uint z)
 }
 
 int dx = 1;
-int dy = 2;
+int dy = 4;
+int dz = 6;
 
 void main() {
     uint x = gl_WorkGroupID.x;
@@ -65,22 +66,46 @@ void main() {
     uint t = 0;
     float v = 1;
     uint k = 0;
-    uint cx = dy;
+    uint cy = dy; /* cy / dx = subvox y coord */
+    uint cz = dz; /* cz / dx - subvox z coord */
     while (t < 612) {
-        if (cx >= dx) {
-            cx -= dx;
-            y += 1;
-            if (y >= CHUNK_SCALE) { 
-                y = 0;
-                checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_Y);
+        if (cy >= dx) {
+            if (cz > cy) {
+                cz -= dx;
+                z += 1;
+                if (z >= CHUNK_SCALE) {
+                    z = 0;
+                    checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_Z);
+                    if (checkChunk == NEIGHBOUR_EMPTY) {
+                        break;
+                    }
+                }
+            } else {
+                cy -= dx;
+                y += 1;
+                if (y >= CHUNK_SCALE) {
+                    y = 0;
+                    checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_Y);
+                    if (checkChunk == NEIGHBOUR_EMPTY) {
+                        break;
+                    }
+                }
+            }
+        } else if (cz >= dx) {
+            cz -= dx;
+            z += 1;
+            if (z >= CHUNK_SCALE) {
+                z = 0;
+                checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_Z);
                 if (checkChunk == NEIGHBOUR_EMPTY) {
                     break;
                 }
             }
         } else {
-            cx += dy;
+            cy += dy;
+            cz += dz;
             x += 1;
-            if (x >= CHUNK_SCALE) { 
+            if (x >= CHUNK_SCALE) {
                 x = 0;
                 checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_X);
                 if (checkChunk == NEIGHBOUR_EMPTY) {
@@ -91,6 +116,7 @@ void main() {
 
         uint checkId = xyzToIndex(x, y, z);
         if(testVox(checkChunk, checkId) != 0 && t > 1) {
+            v = 0; /* tmp */
             k++;
             v -= v*float(k)/float(t);
         } else {
@@ -99,21 +125,16 @@ void main() {
         t += 1;
     }
 
-    uint quantizedNormal = getQuantizedNormal(thisChunk, id);
-    vec3 normal = normalPalette[quantizedNormal];
-    vec3 lightDir = vec3(-dx, -dy, 0.5);
-    lightDir = normalize(lightDir);
-    float normalLightingCompoent = -dot(normal, lightDir);
-    normalLightingCompoent = max(0, normalLightingCompoent);
-    uint light = int(round(normalLightingCompoent * 255));
-    setBrightness(thisChunk, id, light);
-
-    //setBrightness(thisChunk, id, int(floor(v * 255)));
     /*
-    if (normal == NORMAL_Y_POS) {
-        setBrightness(thisChunk, id, 255);
-    } else {
-        setBrightness(thisChunk, id, 0);
-    }
-    */
+       uint quantizedNormal = getQuantizedNormal(thisChunk, id);
+       vec3 normal = normalPalette[quantizedNormal];
+       vec3 lightDir = vec3(-dx, -dy, 0.5);
+       lightDir = normalize(lightDir);
+       float normalLightingCompoent = -dot(normal, lightDir);
+       normalLightingCompoent = max(0, normalLightingCompoent);
+       uint light = int(round(normalLightingCompoent * 255));
+       setBrightness(thisChunk, id, light);
+     */
+
+    setBrightness(thisChunk, id, int(floor(v * 255)));
 }

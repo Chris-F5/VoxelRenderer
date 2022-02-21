@@ -34,6 +34,16 @@ def sampleVox(x, y, z, genInfo):
             return (colIndex, normalIndex)
         else:
             return None
+    elif genInfo["type"] == "simplex":
+        noiseScale = genInfo["simplex_scale"]
+        n = opensimplex.noise3(x / noiseScale, y / noiseScale, z / noiseScale)
+        colIndex = 0
+        normalV = (0.0, 1.0, 0.0)
+        normalIndex = quantizeNormal(normalV)
+        if n > 0:
+            return (colIndex, normalIndex)
+        else:
+            return None
     else:
         return None
 
@@ -95,6 +105,19 @@ def sphere(radius, color):
     genInfo["sphere_radius"] = radius
     return genInfo
 
+def simplex(size, color, noiseScale):
+    genInfo = {}
+    GenInfo_init(genInfo)
+    GenInfo_setColor(genInfo, 0, color)
+    genInfo["xSize"] = size; 
+    genInfo["ySize"] = size; 
+    genInfo["zSize"] = size; 
+    genInfo["type"] = "simplex"
+    genInfo["simplex_scale"] = noiseScale
+    return genInfo
+
+
 green = (109, 219, 35)
-genInfo = sphere(64, green)
+#genInfo = sphere(64, green)
+genInfo = simplex(64, green, 10)
 generateObject("object1.svo", genInfo)
