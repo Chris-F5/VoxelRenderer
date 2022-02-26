@@ -26,7 +26,8 @@ void ChunkLighting_updateChunks(
     VkDevice logicalDevice,
     VkQueue queue,
     uint32_t count,
-    ChunkRef* chunks);
+    ChunkRef* chunks,
+    vec3 rayDir);
 
 void ChunkLighting_destroy(
     ChunkLighting* lighting,

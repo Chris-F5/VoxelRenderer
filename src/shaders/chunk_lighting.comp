@@ -8,6 +8,7 @@ layout(push_constant) uniform Constants {
     uint thisChunk;
     uint CHUNK_SCALE;
     uint CHUNK_VOX_COUNT;
+    vec4 rayDir;
 };
 
 layout(binding = 0) buffer Brightness {
@@ -50,28 +51,93 @@ uint xyzToIndex(uint x, uint y, uint z)
         + z * CHUNK_SCALE * CHUNK_SCALE;
 }
 
-int dx = 1;
-int dy = 4;
-int dz = 6;
 
 void main() {
-    uint x = gl_WorkGroupID.x;
-    uint y = gl_WorkGroupID.y;
-    uint z = gl_WorkGroupID.z;
+    int dx = int(round(rayDir.x * 512));
+    int dy = int(round(rayDir.y * 512));
+    int dz = int(round(rayDir.z * 512));
+    uint dirMask = 0;
+    if (dx < 0) {
+        dirMask |= 1;
+        dx = -dx;
+    }
+    if (dy < 0) {
+        dirMask |= 2;
+        dy = -dy;
+    }
+    if (dz < 0) {
+        dirMask |= 4;
+        dz = -dz;
+    }
+
+    int x = int(gl_WorkGroupID.x);
+    int y = int(gl_WorkGroupID.y);
+    int z = int(gl_WorkGroupID.z);
 
     uint id = xyzToIndex(x, y, z);
 
     uint checkChunk = thisChunk;
 
-    uint t = 0;
     float v = 1;
-    uint k = 0;
+    uint t = 0;
     uint cy = dy; /* cy / dx = subvox y coord */
     uint cz = dz; /* cz / dx - subvox z coord */
     while (t < 612) {
         if (cy >= dx) {
             if (cz > cy) {
-                cz -= dx;
+                if (dx == 0) {
+                    cy += dy;
+                } else {
+                    cz -= dx;
+                }
+                if ((dirMask & 4) == 0) {
+                    z += 1;
+                    if (z >= CHUNK_SCALE) {
+                        z = 0;
+                        checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_Z);
+                        if (checkChunk == NEIGHBOUR_EMPTY) {
+                            break;
+                        }
+                    }
+                } else {
+                    z -= 1;
+                    if (z < 0) {
+                        z = int(CHUNK_SCALE) - 1;
+                        checkChunk = getNeighbour(checkChunk, NEIGHBOUR_NEGATIVE_Z);
+                        if (checkChunk == NEIGHBOUR_EMPTY) {
+                            break;
+                        }
+                    }
+                }
+            } else {
+                if (dx == 0) {
+                    cz += dz;
+                } else {
+                    cy -= dx;
+                }
+                if ((dirMask & 2) == 0) {
+                    y += 1;
+                    if (y >= CHUNK_SCALE) {
+                        y = 0;
+                        checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_Y);
+                        if (checkChunk == NEIGHBOUR_EMPTY) {
+                            break;
+                        }
+                    }
+                } else {
+                    y -= 1;
+                    if (y < 0) {
+                        y = int(CHUNK_SCALE) - 1;
+                        checkChunk = getNeighbour(checkChunk, NEIGHBOUR_NEGATIVE_Y);
+                        if (checkChunk == NEIGHBOUR_EMPTY) {
+                            break;
+                        }
+                    }
+                }
+            }
+        } else if (cz >= dx) {
+            cz -= dx;
+            if ((dirMask & 4) == 0) {
                 z += 1;
                 if (z >= CHUNK_SCALE) {
                     z = 0;
@@ -81,35 +147,35 @@ void main() {
                     }
                 }
             } else {
-                cy -= dx;
-                y += 1;
-                if (y >= CHUNK_SCALE) {
-                    y = 0;
-                    checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_Y);
+                z -= 1;
+                if (z < 0) {
+                    z = int(CHUNK_SCALE) - 1;
+                    checkChunk = getNeighbour(checkChunk, NEIGHBOUR_NEGATIVE_Z);
                     if (checkChunk == NEIGHBOUR_EMPTY) {
                         break;
                     }
                 }
             }
-        } else if (cz >= dx) {
-            cz -= dx;
-            z += 1;
-            if (z >= CHUNK_SCALE) {
-                z = 0;
-                checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_Z);
-                if (checkChunk == NEIGHBOUR_EMPTY) {
-                    break;
-                }
-            }
         } else {
             cy += dy;
             cz += dz;
-            x += 1;
-            if (x >= CHUNK_SCALE) {
-                x = 0;
-                checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_X);
-                if (checkChunk == NEIGHBOUR_EMPTY) {
-                    break;
+            if ((dirMask & 1) == 0) {
+                x += 1;
+                if (x >= CHUNK_SCALE) {
+                    x = 0;
+                    checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_X);
+                    if (checkChunk == NEIGHBOUR_EMPTY) {
+                        break;
+                    }
+                }
+            } else {
+                x -= 1;
+                if (x < 0) {
+                    x = int(CHUNK_SCALE) - 1;
+                    checkChunk = getNeighbour(checkChunk, NEIGHBOUR_NEGATIVE_X);
+                    if (checkChunk == NEIGHBOUR_EMPTY) {
+                        break;
+                    }
                 }
             }
         }
@@ -117,22 +183,18 @@ void main() {
         uint checkId = xyzToIndex(x, y, z);
         if(testVox(checkChunk, checkId) != 0 && t > 1) {
             v = 0; /* tmp */
-            k++;
-            v -= v*float(k)/float(t);
-        } else {
-            k = 0;
+            break;
         }
+
         t += 1;
     }
 
     uint quantizedNormal = getQuantizedNormal(thisChunk, id);
     vec3 normal = normalPalette[quantizedNormal];
-    vec3 lightDir = vec3(-dx, -dy, 0.5);
-    lightDir = normalize(lightDir);
+    vec3 lightDir = -vec3(rayDir);
     float normalLightingCompoent = -dot(normal, lightDir);
     normalLightingCompoent = max(0, normalLightingCompoent);
-    uint light = int(round(normalLightingCompoent * 255));
+    v *= normalLightingCompoent;
+    uint light = int(round(v * 255));
     setBrightness(thisChunk, id, light);
-
-    //setBrightness(thisChunk, id, int(floor(v * 255)));
 }

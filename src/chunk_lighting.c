@@ -1,5 +1,7 @@
 #include "./chunk_lighting.h"
 
+#include <cglm/cglm.h>
+
 #include "./vk_utils/descriptor_set.h"
 #include "./vk_utils/exceptions.h"
 #include "./vk_utils/shader_module.h"
@@ -8,6 +10,7 @@ typedef struct {
     uint32_t thisChunk;
     uint32_t chunkScale;
     uint32_t chunkVoxCount;
+    vec4 rayDir;
 } LightingPushConstants;
 
 static void recordLightingCommandBuffers(
@@ -341,7 +344,8 @@ void ChunkLighting_updateChunks(
     VkDevice logicalDevice,
     VkQueue queue,
     uint32_t count,
-    ChunkRef* chunks)
+    ChunkRef* chunks,
+    vec3 rayDir)
 {
     for (uint32_t i = 0; i < count; i++) {
         handleVkResult(
@@ -359,6 +363,8 @@ void ChunkLighting_updateChunks(
             pushConstant.chunkScale = CHUNK_SCALE;
             pushConstant.chunkVoxCount = CHUNK_VOX_COUNT;
             pushConstant.thisChunk = chunks[i];
+            glm_vec3_copy(rayDir, pushConstant.rayDir);
+
             recordLightingCommandBuffers(
                 chunkLighting->pipeline,
                 chunkLighting->pipelineLayout,

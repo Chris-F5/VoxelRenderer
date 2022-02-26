@@ -17,6 +17,10 @@ typedef struct {
 
 void Camera_init(Camera* camera, float aspectRatio);
 
+void Camera_forward(const Camera* camera, vec3 forward);
+
+void Camera_right(const Camera* camera, vec3 right);
+
 void Camera_userInput(Camera* camera, GLFWwindow* window);
 
 void Camera_viewMat(Camera* camera, mat4 view);

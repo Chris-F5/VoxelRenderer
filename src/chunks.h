@@ -4,6 +4,7 @@
 #include "./bit_array.h"
 #include "./id_allocator.h"
 #include "./vox_palette.h"
+#include "./models.h"
 
 #include <cglm/types.h>
 
@@ -12,6 +13,8 @@
 #define CHUNK_SCALE 32
 #define CHUNK_VOX_COUNT (CHUNK_SCALE * CHUNK_SCALE * CHUNK_SCALE)
 #define CHUNK_BIT_MASK_SIZE ((CHUNK_VOX_COUNT + 7) / 8)
+
+#define CHUNK_CAPACITY 10000
 
 #define NEIGHBOUR_EMPTY ~0
 #define NEIGHBOUR_NEGATIVE_X 0

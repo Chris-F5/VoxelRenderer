@@ -8,8 +8,6 @@
 #include "./vert_gen.h"
 #include "./vk_utils/buffer.h"
 
-static const unsigned int CHUNK_CAPACITY = 10000;
-
 /* CHUNK STORAGE METHODS */
 
 void ChunkStorage_init(ChunkStorage* storage)

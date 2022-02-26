@@ -14,10 +14,10 @@
 #include "./normal_gen.h"
 #include "./pointmap_object_loader.h"
 #include "./renderer.h"
+#include "./sparse_vox_object_loader.h"
 #include "./utils.h"
 #include "./vert_gen.h"
 #include "./vulkan_device.h"
-#include "./sparse_vox_object_loader.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -149,16 +149,20 @@ int main()
             device.transientGraphicsCommandPool);
 
         /* UPDATE CHUNK LIGHTING */
+        vec4 lightDir = { 1.0f, 2.0f, 1.5f };
+        glm_vec3_normalize(lightDir);
 
         ChunkLighting_updateChunks(
             &chunkLighting,
             device.logical,
             device.graphicsQueue,
             chunkStorage.idAllocator.count,
-            allChunks);
+            allChunks,
+            lightDir);
     }
 
     /* GENERATE CHUNK MESHES */
+    ModelRef* models = (ModelRef*)malloc(CHUNK_CAPACITY * sizeof(ModelRef));
     ChunkVertGen vertGen;
     {
         ChunkVertGen_init(&vertGen);
@@ -174,7 +178,7 @@ int main()
                     &paletteStorage,
                     chunkPalette);
 
-                ModelRef model = ModelStorage_add(
+                models[chunk] = ModelStorage_add(
                     &renderer.modelStorage,
                     device.logical,
                     vertGen.vertCount);
@@ -182,7 +186,7 @@ int main()
                 ModelStorage_updateVertexData(
                     &renderer.modelStorage,
                     device.logical,
-                    model,
+                    models[chunk],
                     vertGen.vertCount,
                     vertGen.vertBuffer);
 
@@ -197,7 +201,7 @@ int main()
                 ModelStorage_updateUniformData(
                     &renderer.modelStorage,
                     device.logical,
-                    model,
+                    models[chunk],
                     modelData);
             } while (IdAllocator_next(&chunkStorage.idAllocator, chunk, &chunk));
 
@@ -219,8 +223,6 @@ int main()
         camera.pitch = -20;
     }
 
-    free(allChunks);
-
     /* MAIN LOOP */
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -230,7 +232,49 @@ int main()
         Camera_viewMat(&camera, camData.view);
         Camera_projMat(&camera, camData.proj);
         Renderer_drawFrame(&renderer, &device, camData);
+        {
+            /* UPDATE CHUNK LIGHTING */
+            vec3 lightDir;
+            Camera_forward(&camera, lightDir);
+            lightDir[0] = -lightDir[0];
+            lightDir[1] = -lightDir[1];
+            lightDir[2] = -lightDir[2];
+            glm_vec3_normalize(lightDir);
+
+            ChunkLighting_updateChunks(
+                &chunkLighting,
+                device.logical,
+                device.graphicsQueue,
+                chunkStorage.idAllocator.count,
+                allChunks,
+                lightDir);
+        }
+        {
+            ChunkRef chunk;
+            int i = 0;
+            if (IdAllocator_first(&chunkStorage.idAllocator, &chunk)) {
+                do {
+                    ChunkVertGen_generate(
+                        &vertGen,
+                        &chunkStorage,
+                        &chunkGpuStorage,
+                        device.logical,
+                        chunk,
+                        &paletteStorage,
+                        chunkPalette);
+
+                    ModelStorage_updateVertexData(
+                        &renderer.modelStorage,
+                        device.logical,
+                        models[chunk],
+                        vertGen.vertCount,
+                        vertGen.vertBuffer);
+                } while (IdAllocator_next(&chunkStorage.idAllocator, chunk, &chunk));
+            }
+        }
     }
+
+    free(allChunks);
     vkDeviceWaitIdle(device.logical);
 
     NormalGen_destroy(

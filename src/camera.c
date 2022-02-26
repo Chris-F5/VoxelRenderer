@@ -5,14 +5,14 @@
 const float moveSpeed = 0.5f;
 const float rotSpeed = 2.0f;
 
-static void Camera_forward(const Camera* camera, vec3 forward)
+void Camera_forward(const Camera* camera, vec3 forward)
 {
     forward[0] = cos(glm_rad(camera->pitch)) * sin(glm_rad(camera->yaw));
     forward[1] = sin(glm_rad(camera->pitch));
     forward[2] = cos(glm_rad(camera->pitch)) * cos(glm_rad(camera->yaw));
 }
 
-static void Camera_right(const Camera* camera, vec3 right)
+void Camera_right(const Camera* camera, vec3 right)
 {
     vec3 forward;
     Camera_forward(camera, forward);
