@@ -41,6 +41,34 @@ def fibQuantizeNormal(v):
             best = i
     return best
 
+def adjacentVoxPoints(x, y, z):
+    points = [(0, 0, 0)] * 3 * 3 * 3
+    i = 0
+    for xd in range(-1, 2):
+        for yd in range(-1, 2):
+            for zd in range(-1, 2):
+                points[i] = (x + xd, y + yd, z + zd)
+                i += 1
+    return points
+
+def gradientFromAdjFloats(adjFloats):
+    gx = 0
+    gy = 0
+    gz = 0
+    for i in range(3 * 3 * 3):
+        dx = i % 3 - 1
+        dy = i // 3 % 3 - 1
+        dz = i // 9 % 3 - 1
+        gx -= dx * adjFloats[i]
+        gy -= dy * adjFloats[i]
+        gz -= dz * adjFloats[i]
+    return (gx, gy, gz)
+        
+
+def simplexFloatSample(x, y, z, genInfo):
+    noiseScale = genInfo["simplex_scale"]
+    return opensimplex.noise3(x / noiseScale, y / noiseScale, z / noiseScale)
+
 def sampleVox(x, y, z, genInfo):
     if genInfo["type"] == "sphere":
         radius = genInfo["sphere_radius"]
@@ -56,22 +84,26 @@ def sampleVox(x, y, z, genInfo):
         else:
             return None
     elif genInfo["type"] == "simplex":
-        noiseScale = genInfo["simplex_scale"]
-        n = opensimplex.noise3(x / noiseScale, y / noiseScale, z / noiseScale)
-        colIndex = 0
-        normalV = (0.0, 1.0, 0.0)
-        normalIndex = fibQuantizeNormal(normalV)
+        n = simplexFloatSample(x, y, z, genInfo)
         if n > 0:
+            colIndex = 0
+            adj = adjacentVoxPoints(x, y, z)
+            adjFloats = [0.0] * 3 * 3 * 3
+            for i in range(3 * 3 * 3):
+                adjFloats[i] = simplexFloatSample(adj[i][0], adj[i][1], adj[i][2], genInfo)
+
+            normalV = gradientFromAdjFloats(adjFloats)
+            normalIndex = fibQuantizeNormal(normalV)
             return (colIndex, normalIndex)
         else:
             return None
     else:
         return None
 
-def generateChunk(f, cx, cy, cz, genInfo):
+def generateChunk(f, cx, cy, cz, genInfo, xo, yo, zo):
     skip = 0
 
-    f.write("CHUNK {} {} {}\n".format(cx, cy, cz))
+    f.write("CHUNK {} {} {}\n".format(cx + xo, cy + yo, cz + zo))
     for i in range(chunkScale * chunkScale * chunkScale):
         x = i % chunkScale + cx * chunkScale
         y = i // chunkScale % chunkScale + cy * chunkScale
@@ -85,16 +117,21 @@ def generateChunk(f, cx, cy, cz, genInfo):
                 skip = 0
             colIndex, normalIndex = vox
             f.write("{} {}\n".format(colIndex, normalIndex))
+        if i % (chunkScale * chunkScale) == 0:
+            print("\tthis chunk {:.1f}%".format(100 * i / (chunkScale * chunkScale * chunkScale)))
 
     if skip > 0:
         f.write("-{}\n".format(skip))
 
-def generateObject(filename, genInfo):
+def beginFile(filename, palette):
     f = open(filename, "w")
     f.write("CHUNK_SCALE={}\n".format(chunkScale))
     for i in range(256):
-        col = genInfo["palette"][i]
+        col = palette[i]
         f.write("{} {} {}\n".format(col[0], col[1], col[2]))
+    return f
+
+def generateObject(f, genInfo, xo = 0, yo = 0, zo = 0):
     xChunkSize = (genInfo["xSize"] - 1) // chunkScale + 1
     yChunkSize = (genInfo["ySize"] - 1) // chunkScale + 1
     zChunkSize = (genInfo["zSize"] - 1) // chunkScale + 1
@@ -102,23 +139,15 @@ def generateObject(filename, genInfo):
     for cx in range(xChunkSize):
         for cy in range(yChunkSize):
             for cz in range(zChunkSize):
-                fractionDone = countDone / (xChunkSize * yChunkSize * zChunkSize)
-                print("{:.1f}%".format(fractionDone * 100))
-                generateChunk(f, cx, cy, cz, genInfo)
+                print("chunk {} / {}".format(countDone + 1, xChunkSize * yChunkSize * zChunkSize))
+                generateChunk(f, cx, cy, cz, genInfo, xo, yo, zo)
                 countDone += 1
-    f.close()
 
-def GenInfo_init(genInfo):
-    global chunkScale
-    genInfo["palette"] = [(255, 0, 255)] * 256
+def setColor(palette, index, rgb):
+    palette[index] = rgb
 
-def GenInfo_setColor(genInfo, index, rgb):
-    genInfo["palette"][index] = rgb
-
-def sphere(radius, color):
+def sphere(radius):
     genInfo = {}
-    GenInfo_init(genInfo)
-    GenInfo_setColor(genInfo, 0, color)
     genInfo["xSize"] = radius * 2
     genInfo["ySize"] = radius * 2
     genInfo["zSize"] = radius * 2
@@ -126,10 +155,8 @@ def sphere(radius, color):
     genInfo["sphere_radius"] = radius
     return genInfo
 
-def simplex(size, color, noiseScale):
+def simplex(size, noiseScale):
     genInfo = {}
-    GenInfo_init(genInfo)
-    GenInfo_setColor(genInfo, 0, color)
     genInfo["xSize"] = size; 
     genInfo["ySize"] = size; 
     genInfo["zSize"] = size; 
@@ -139,6 +166,14 @@ def simplex(size, color, noiseScale):
 
 
 green = (109, 219, 35)
-genInfo = sphere(64, green)
-#genInfo = simplex(64, green, 10)
-generateObject("object1.svo", genInfo)
+palette = [(255, 0, 255)] * 256
+setColor(palette, 0 , green)
+
+f = beginFile("object1.svo", palette)
+
+sphereGenInfo = sphere(32)
+noiseGenInfo = simplex(16, 10)
+generateObject(f, sphereGenInfo, 0, 0, 0)
+generateObject(f, noiseGenInfo, 3, 0, 0)
+
+f.close()
