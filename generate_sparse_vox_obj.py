@@ -1,10 +1,12 @@
 import opensimplex
 from math import sqrt
 import random
+import normal_palette_gen
 
 chunkScale = 32
+normalPoints = normal_palette_gen.fibonacciPoints()
 
-def quantizeNormal(v):
+def naiveQuantizeNormal(v):
     m = sqrt(pow(v[0], 2) + pow(v[1], 2) + pow(v[2], 2));
 
     if (m == 0):
@@ -20,6 +22,25 @@ def quantizeNormal(v):
 
     return x + y * 5 + z * 25;
 
+def fibQuantizeNormal(v):
+    # normalize
+    m = sqrt(pow(v[0], 2) + pow(v[1], 2) + pow(v[2], 2));
+    if m == 0:
+        return 0
+    nx = v[0] / m
+    ny = v[1] / m
+    nz = v[2] / m
+
+    lowestD = 999
+    best = 0
+    for i in range(len(normalPoints)):
+        p = normalPoints[i]
+        d = sqrt(pow(nx - p[0], 2) + pow(ny - p[1], 2) + pow(nz - p[2], 2))
+        if d < lowestD:
+            lowestD = d
+            best = i
+    return best
+
 def sampleVox(x, y, z, genInfo):
     if genInfo["type"] == "sphere":
         radius = genInfo["sphere_radius"]
@@ -29,7 +50,7 @@ def sampleVox(x, y, z, genInfo):
             + (z - radius) ** 2)
         colIndex = 0
         normalV = (x - radius, y - radius, z - radius)
-        normalIndex = quantizeNormal(normalV)
+        normalIndex = fibQuantizeNormal(normalV)
         if distanceFromCenter <= radius:
             return (colIndex, normalIndex)
         else:
@@ -39,7 +60,7 @@ def sampleVox(x, y, z, genInfo):
         n = opensimplex.noise3(x / noiseScale, y / noiseScale, z / noiseScale)
         colIndex = 0
         normalV = (0.0, 1.0, 0.0)
-        normalIndex = quantizeNormal(normalV)
+        normalIndex = fibQuantizeNormal(normalV)
         if n > 0:
             return (colIndex, normalIndex)
         else:
@@ -118,6 +139,6 @@ def simplex(size, color, noiseScale):
 
 
 green = (109, 219, 35)
-#genInfo = sphere(64, green)
-genInfo = simplex(64, green, 10)
+genInfo = sphere(64, green)
+#genInfo = simplex(64, green, 10)
 generateObject("object1.svo", genInfo)

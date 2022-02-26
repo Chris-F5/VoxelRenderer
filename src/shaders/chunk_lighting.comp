@@ -125,16 +125,14 @@ void main() {
         t += 1;
     }
 
-    /*
-       uint quantizedNormal = getQuantizedNormal(thisChunk, id);
-       vec3 normal = normalPalette[quantizedNormal];
-       vec3 lightDir = vec3(-dx, -dy, 0.5);
-       lightDir = normalize(lightDir);
-       float normalLightingCompoent = -dot(normal, lightDir);
-       normalLightingCompoent = max(0, normalLightingCompoent);
-       uint light = int(round(normalLightingCompoent * 255));
-       setBrightness(thisChunk, id, light);
-     */
+    uint quantizedNormal = getQuantizedNormal(thisChunk, id);
+    vec3 normal = normalPalette[quantizedNormal];
+    vec3 lightDir = vec3(-dx, -dy, 0.5);
+    lightDir = normalize(lightDir);
+    float normalLightingCompoent = -dot(normal, lightDir);
+    normalLightingCompoent = max(0, normalLightingCompoent);
+    uint light = int(round(normalLightingCompoent * 255));
+    setBrightness(thisChunk, id, light);
 
-    setBrightness(thisChunk, id, int(floor(v * 255)));
+    //setBrightness(thisChunk, id, int(floor(v * 255)));
 }
