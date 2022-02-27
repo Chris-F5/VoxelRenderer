@@ -44,9 +44,9 @@ def fibQuantizeNormal(v):
 def adjacentVoxPoints(x, y, z):
     points = [(0, 0, 0)] * 3 * 3 * 3
     i = 0
-    for xd in range(-1, 2):
+    for zd in range(-1, 2):
         for yd in range(-1, 2):
-            for zd in range(-1, 2):
+            for xd in range(-1, 2):
                 points[i] = (x + xd, y + yd, z + zd)
                 i += 1
     return points
