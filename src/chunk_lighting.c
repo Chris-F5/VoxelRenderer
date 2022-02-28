@@ -10,8 +10,16 @@ typedef struct {
     uint32_t thisChunk;
     uint32_t chunkScale;
     uint32_t chunkVoxCount;
-    vec4 rayDir;
-} LightingPushConstants;
+    vec4 lightDir;
+} DirectLightingPushConstants;
+
+typedef struct {
+    uint32_t thisChunk;
+    uint32_t chunkScale;
+    uint32_t chunkVoxCount;
+    uint32_t randomSeed;
+    vec4 lightDir;
+} DiffuseLightingPushConstants;
 
 static void recordLightingCommandBuffers(
     VkPipeline pipeline,
@@ -19,7 +27,8 @@ static void recordLightingCommandBuffers(
     VkDescriptorSet descriptorSet,
     unsigned int count,
     VkCommandBuffer* commandBuffers,
-    LightingPushConstants* pushConstants)
+    size_t pushConstantSize,
+    void* pushConstants)
 {
     VkCommandBufferBeginInfo beginInfo;
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -51,8 +60,8 @@ static void recordLightingCommandBuffers(
             pipelineLayout,
             VK_SHADER_STAGE_COMPUTE_BIT,
             0,
-            sizeof(pushConstants[i]),
-            &pushConstants[i]);
+            pushConstantSize,
+            pushConstants + pushConstantSize * i);
 
         vkCmdDispatch(
             commandBuffers[i],
@@ -62,7 +71,7 @@ static void recordLightingCommandBuffers(
 
         handleVkResult(
             vkEndCommandBuffer(commandBuffers[i]),
-            "ending lighting command buffer");
+            "ending direct lighting command buffer");
     }
 }
 
@@ -239,15 +248,20 @@ void ChunkLighting_init(
             0, NULL);
     }
 
-    /* PIPELINE LAYOUT */
+    /* PIPELINE LAYOUTS */
     {
         VkDescriptorSetLayout descriptorSetsLayouts[]
             = { lighting->descriptorSetLayout };
 
-        VkPushConstantRange pushConstant;
-        pushConstant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-        pushConstant.offset = 0;
-        pushConstant.size = sizeof(LightingPushConstants);
+        VkPushConstantRange directLightingPushConstant;
+        directLightingPushConstant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        directLightingPushConstant.offset = 0;
+        directLightingPushConstant.size = sizeof(DirectLightingPushConstants);
+
+        VkPushConstantRange diffuseLightingPushConstant;
+        diffuseLightingPushConstant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        diffuseLightingPushConstant.offset = 0;
+        diffuseLightingPushConstant.size = sizeof(DiffuseLightingPushConstants);
 
         VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo;
         pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -257,23 +271,33 @@ void ChunkLighting_init(
             = sizeof(descriptorSetsLayouts) / sizeof(descriptorSetsLayouts[0]);
         pipelineLayoutCreateInfo.pSetLayouts = &lighting->descriptorSetLayout;
         pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
-        pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstant;
+        pipelineLayoutCreateInfo.pPushConstantRanges = &directLightingPushConstant;
 
         handleVkResult(
             vkCreatePipelineLayout(
                 logicalDevice,
                 &pipelineLayoutCreateInfo,
                 NULL,
-                &lighting->pipelineLayout),
-            "creating chunk lighting pipeline layout");
+                &lighting->directPipelineLayout),
+            "creating chunk direct lighting pipeline layout");
+
+        pipelineLayoutCreateInfo.pPushConstantRanges = &diffuseLightingPushConstant;
+
+        handleVkResult(
+            vkCreatePipelineLayout(
+                logicalDevice,
+                &pipelineLayoutCreateInfo,
+                NULL,
+                &lighting->diffusePipelineLayout),
+            "creating chunk diffuse lighting pipeline layout");
     }
 
-    /* PIPELINE */
+    /* PIPELINES */
     {
         VkShaderModule shaderModule;
         createShaderModule(
             logicalDevice,
-            "chunk_lighting.comp.spv",
+            "direct_lighting.comp.spv",
             &shaderModule);
 
         VkPipelineShaderStageCreateInfo shaderStage;
@@ -290,7 +314,7 @@ void ChunkLighting_init(
         pipelineCreateInfo.pNext = NULL;
         pipelineCreateInfo.flags = 0;
         pipelineCreateInfo.stage = shaderStage;
-        pipelineCreateInfo.layout = lighting->pipelineLayout;
+        pipelineCreateInfo.layout = lighting->directPipelineLayout;
         pipelineCreateInfo.basePipelineHandle = NULL;
         pipelineCreateInfo.basePipelineIndex = 0;
 
@@ -301,25 +325,45 @@ void ChunkLighting_init(
                 1,
                 &pipelineCreateInfo,
                 NULL,
-                &lighting->pipeline),
-            "creating chunk lighting pipeline");
+                &lighting->directPipeline),
+            "creating direct lighting pipeline");
+
+        createShaderModule(
+            logicalDevice,
+            "diffuse_lighting.comp.spv",
+            &shaderModule);
+        pipelineCreateInfo.stage.module = shaderModule;
+        pipelineCreateInfo.layout = lighting->diffusePipelineLayout;
+
+        handleVkResult(
+            vkCreateComputePipelines(
+                logicalDevice,
+                VK_NULL_HANDLE,
+                1,
+                &pipelineCreateInfo,
+                NULL,
+                &lighting->diffusePipeline),
+            "creating diffuse lighting pipeline");
     }
 
-    /* ALLOCATE COMMAND BUFFER */
+    /* ALLOCATE COMMAND BUFFERS */
     {
         VkCommandBufferAllocateInfo allocInfo;
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.pNext = NULL;
         allocInfo.commandPool = commandPool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = 1;
+        allocInfo.commandBufferCount = 2;
 
+        VkCommandBuffer commandBuffers[2];
         handleVkResult(
             vkAllocateCommandBuffers(
                 logicalDevice,
                 &allocInfo,
-                &lighting->commandBuffer),
-            "allocating chunk lighting command buffers");
+                commandBuffers),
+            "allocating lighting command buffers");
+        lighting->directCommandBuffer = commandBuffers[0];
+        lighting->diffuseCommandBuffer = commandBuffers[1];
     }
 
     /* FENCE */
@@ -339,13 +383,13 @@ void ChunkLighting_init(
     }
 }
 
-void ChunkLighting_updateChunks(
+void ChunkLighting_directLightingPass(
     ChunkLighting* chunkLighting,
     VkDevice logicalDevice,
     VkQueue queue,
     uint32_t count,
     ChunkRef* chunks,
-    vec3 rayDir)
+    vec3 lightDir)
 {
     for (uint32_t i = 0; i < count; i++) {
         handleVkResult(
@@ -356,21 +400,22 @@ void ChunkLighting_updateChunks(
                 VK_TRUE,
                 UINT64_MAX),
             "waiting for chunk lighting fence");
-        vkResetCommandBuffer(chunkLighting->commandBuffer, 0);
+        vkResetCommandBuffer(chunkLighting->directCommandBuffer, 0);
 
         {
-            LightingPushConstants pushConstant;
+            DirectLightingPushConstants pushConstant;
             pushConstant.chunkScale = CHUNK_SCALE;
             pushConstant.chunkVoxCount = CHUNK_VOX_COUNT;
             pushConstant.thisChunk = chunks[i];
-            glm_vec3_copy(rayDir, pushConstant.rayDir);
+            glm_vec3_copy(lightDir, pushConstant.lightDir);
 
             recordLightingCommandBuffers(
-                chunkLighting->pipeline,
-                chunkLighting->pipelineLayout,
+                chunkLighting->directPipeline,
+                chunkLighting->directPipelineLayout,
                 chunkLighting->descriptorSet,
                 1,
-                &chunkLighting->commandBuffer,
+                &chunkLighting->directCommandBuffer,
+                sizeof(DirectLightingPushConstants),
                 &pushConstant);
         }
 
@@ -383,7 +428,75 @@ void ChunkLighting_updateChunks(
         submitInfo.waitSemaphoreCount = 0;
         submitInfo.pWaitDstStageMask = 0;
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &chunkLighting->commandBuffer;
+        submitInfo.pCommandBuffers = &chunkLighting->directCommandBuffer;
+        submitInfo.signalSemaphoreCount = 0;
+        submitInfo.pSignalSemaphores = NULL;
+
+        handleVkResult(
+            vkQueueSubmit(
+                queue,
+                1,
+                &submitInfo,
+                chunkLighting->fence),
+            "submitting chunk lighting update command buffer");
+    }
+    handleVkResult(
+        vkWaitForFences(
+            logicalDevice,
+            1,
+            &chunkLighting->fence,
+            VK_TRUE,
+            UINT64_MAX),
+        "waiting for chunk lighting fence");
+}
+
+void ChunkLighting_diffuseLightingPass(
+    ChunkLighting* chunkLighting,
+    VkDevice logicalDevice,
+    VkQueue queue,
+    uint32_t count,
+    ChunkRef* chunks,
+    vec3 lightDir)
+{
+    for (uint32_t i = 0; i < count; i++) {
+        handleVkResult(
+            vkWaitForFences(
+                logicalDevice,
+                1,
+                &chunkLighting->fence,
+                VK_TRUE,
+                UINT64_MAX),
+            "waiting for chunk lighting fence");
+        vkResetCommandBuffer(chunkLighting->diffuseCommandBuffer, 0);
+
+        {
+            DiffuseLightingPushConstants pushConstant;
+            pushConstant.chunkScale = CHUNK_SCALE;
+            pushConstant.chunkVoxCount = CHUNK_VOX_COUNT;
+            pushConstant.thisChunk = chunks[i];
+            pushConstant.randomSeed = rand();
+            glm_vec3_copy(lightDir, pushConstant.lightDir);
+
+            recordLightingCommandBuffers(
+                chunkLighting->diffusePipeline,
+                chunkLighting->diffusePipelineLayout,
+                chunkLighting->descriptorSet,
+                1,
+                &chunkLighting->diffuseCommandBuffer,
+                sizeof(DiffuseLightingPushConstants),
+                &pushConstant);
+        }
+
+        handleVkResult(
+            vkResetFences(logicalDevice, 1, &chunkLighting->fence),
+            "resetting chunk lighting fence");
+        VkSubmitInfo submitInfo;
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.pNext = NULL;
+        submitInfo.waitSemaphoreCount = 0;
+        submitInfo.pWaitDstStageMask = 0;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &chunkLighting->diffuseCommandBuffer;
         submitInfo.signalSemaphoreCount = 0;
         submitInfo.pSignalSemaphores = NULL;
 
@@ -412,8 +525,14 @@ void ChunkLighting_destroy(
 {
     vkDestroyDescriptorPool(logicalDevice, lighting->descriptorPool, NULL);
     vkDestroyDescriptorSetLayout(logicalDevice, lighting->descriptorSetLayout, NULL);
-    vkDestroyPipelineLayout(logicalDevice, lighting->pipelineLayout, NULL);
-    vkDestroyPipeline(logicalDevice, lighting->pipeline, NULL);
-    vkFreeCommandBuffers(logicalDevice, commandPool, 1, &lighting->commandBuffer);
+
+    vkDestroyPipelineLayout(logicalDevice, lighting->directPipelineLayout, NULL);
+    vkDestroyPipeline(logicalDevice, lighting->directPipeline, NULL);
+    vkFreeCommandBuffers(logicalDevice, commandPool, 1, &lighting->directCommandBuffer);
+
+    vkDestroyPipelineLayout(logicalDevice, lighting->diffusePipelineLayout, NULL);
+    vkDestroyPipeline(logicalDevice, lighting->diffusePipeline, NULL);
+    vkFreeCommandBuffers(logicalDevice, commandPool, 1, &lighting->diffuseCommandBuffer);
+
     vkDestroyFence(logicalDevice, lighting->fence, NULL);
 }

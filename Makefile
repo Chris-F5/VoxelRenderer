@@ -13,7 +13,8 @@ REQUIREDSHADERS = target/vox_tri.vert.spv \
 				  target/vox_tri.frag.spv \
 				  target/debug_line.vert.spv \
 				  target/debug_line.frag.spv \
-				  target/chunk_lighting.comp.spv \
+				  target/direct_lighting.comp.spv \
+				  target/diffuse_lighting.comp.spv \
 				  target/normal_gen.comp.spv
 
 SHADERLIBS = src/shaders/chunk.glsl

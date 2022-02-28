@@ -9,9 +9,14 @@ typedef struct {
     VkDescriptorPool descriptorPool;
     VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorSet descriptorSet;
-    VkPipelineLayout pipelineLayout;
-    VkPipeline pipeline;
-    VkCommandBuffer commandBuffer;
+    VkPipelineLayout directPipelineLayout;
+    VkPipeline directPipeline;
+    VkCommandBuffer directCommandBuffer;
+
+    VkPipelineLayout diffusePipelineLayout;
+    VkPipeline diffusePipeline;
+    VkCommandBuffer diffuseCommandBuffer;
+
     VkFence fence;
 } ChunkLighting;
 
@@ -21,13 +26,21 @@ void ChunkLighting_init(
     VkDevice logicalDevice,
     VkCommandPool commandPool);
 
-void ChunkLighting_updateChunks(
+void ChunkLighting_directLightingPass(
     ChunkLighting* chunkLighting,
     VkDevice logicalDevice,
     VkQueue queue,
     uint32_t count,
     ChunkRef* chunks,
-    vec3 rayDir);
+    vec3 lightDir);
+
+void ChunkLighting_diffuseLightingPass(
+    ChunkLighting* chunkLighting,
+    VkDevice logicalDevice,
+    VkQueue queue,
+    uint32_t count,
+    ChunkRef* chunks,
+    vec3 lightDir);
 
 void ChunkLighting_destroy(
     ChunkLighting* lighting,

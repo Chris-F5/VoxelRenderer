@@ -149,16 +149,25 @@ int main()
             device.transientGraphicsCommandPool);
 
         /* UPDATE CHUNK LIGHTING */
-        vec4 lightDir = { 1.0f, 2.0f, 1.5f };
+        vec4 lightDir = { -1.0f, -2.0f, -1.5f };
         glm_vec3_normalize(lightDir);
 
-        ChunkLighting_updateChunks(
+        ChunkLighting_directLightingPass(
             &chunkLighting,
             device.logical,
             device.graphicsQueue,
             chunkStorage.idAllocator.count,
             allChunks,
             lightDir);
+        for (int i = 0; i < 100; i++) {
+            ChunkLighting_diffuseLightingPass(
+                &chunkLighting,
+                device.logical,
+                device.graphicsQueue,
+                chunkStorage.idAllocator.count,
+                allChunks,
+                lightDir);
+        }
     }
 
     /* GENERATE CHUNK MESHES */
@@ -232,46 +241,6 @@ int main()
         Camera_viewMat(&camera, camData.view);
         Camera_projMat(&camera, camData.proj);
         Renderer_drawFrame(&renderer, &device, camData);
-        {
-            /* UPDATE CHUNK LIGHTING */
-            vec3 lightDir;
-            Camera_forward(&camera, lightDir);
-            lightDir[0] = -lightDir[0];
-            lightDir[1] = -lightDir[1];
-            lightDir[2] = -lightDir[2];
-            glm_vec3_normalize(lightDir);
-
-            ChunkLighting_updateChunks(
-                &chunkLighting,
-                device.logical,
-                device.graphicsQueue,
-                chunkStorage.idAllocator.count,
-                allChunks,
-                lightDir);
-        }
-        {
-            ChunkRef chunk;
-            int i = 0;
-            if (IdAllocator_first(&chunkStorage.idAllocator, &chunk)) {
-                do {
-                    ChunkVertGen_generate(
-                        &vertGen,
-                        &chunkStorage,
-                        &chunkGpuStorage,
-                        device.logical,
-                        chunk,
-                        &paletteStorage,
-                        chunkPalette);
-
-                    ModelStorage_updateVertexData(
-                        &renderer.modelStorage,
-                        device.logical,
-                        models[chunk],
-                        vertGen.vertCount,
-                        vertGen.vertBuffer);
-                } while (IdAllocator_next(&chunkStorage.idAllocator, chunk, &chunk));
-            }
-        }
     }
 
     free(allChunks);

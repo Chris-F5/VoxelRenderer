@@ -8,7 +8,8 @@ layout(push_constant) uniform Constants {
     uint thisChunk;
     uint CHUNK_SCALE;
     uint CHUNK_VOX_COUNT;
-    vec4 rayDir;
+    uint randomSeed;
+    vec4 lightDir;
 };
 
 layout(binding = 0) buffer Brightness {
@@ -27,6 +28,11 @@ layout(binding = 3) buffer Normals {
 void setBrightness(uint chunk, uint index, uint brightness)
 {
     brightnessData[index + (chunk * CHUNK_VOX_COUNT)] = brightness * 256 * 256 * 256;
+}
+
+uint getBrightness(uint chunk, uint index)
+{
+    return brightnessData[index + (chunk * CHUNK_VOX_COUNT)] / (256 * 256 * 256);
 }
 
 uint getQuantizedNormal(uint chunk, uint index)
@@ -51,37 +57,50 @@ uint xyzToIndex(uint x, uint y, uint z)
         + z * CHUNK_SCALE * CHUNK_SCALE;
 }
 
+uint currentSeed;
+
+uint randomByte()
+{
+    /* Jenkins "one at time" hash function single iteration */
+    currentSeed += ( currentSeed << 10u );
+    currentSeed ^= ( currentSeed >>  6u );
+    currentSeed += ( currentSeed <<  3u );
+    currentSeed ^= ( currentSeed >> 11u );
+    currentSeed += ( currentSeed << 15u );
+    return (currentSeed ^ (currentSeed >> 8)) % 256;
+}
 
 void main() {
-    int dx = int(round(rayDir.x * 512));
-    int dy = int(round(rayDir.y * 512));
-    int dz = int(round(rayDir.z * 512));
-    uint dirMask = 0;
-    if (dx < 0) {
-        dirMask |= 1;
-        dx = -dx;
-    }
-    if (dy < 0) {
-        dirMask |= 2;
-        dy = -dy;
-    }
-    if (dz < 0) {
-        dirMask |= 4;
-        dz = -dz;
-    }
-
     int x = int(gl_WorkGroupID.x);
     int y = int(gl_WorkGroupID.y);
     int z = int(gl_WorkGroupID.z);
-
     uint id = xyzToIndex(x, y, z);
+    currentSeed = randomSeed + x * CHUNK_SCALE + y * CHUNK_SCALE * CHUNK_SCALE + z * CHUNK_VOX_COUNT;
+    uint oldBrightness = getBrightness(thisChunk, id);
+
+    uint dx = randomByte();
+    uint dy = randomByte();
+    uint dz = randomByte();
+    uint dirMask = randomByte();
+
+    vec3 rayDir = normalize(vec3(dx, dy, dz));
+    if ((dirMask & 1) != 0) {
+        rayDir.x = -rayDir.x;
+    }
+    if ((dirMask & 2) != 0) {
+        rayDir.y = -rayDir.y;
+    }
+    if ((dirMask & 4) != 0) {
+        rayDir.z = -rayDir.z;
+    }
 
     uint checkChunk = thisChunk;
-
-    float v = 1;
     uint t = 0;
     uint cy = dy; /* cy / dx = subvox y coord */
     uint cz = dz; /* cz / dx - subvox z coord */
+    bool hit = false;
+    uint hitBrightness = 0;
+
     while (t < 612) {
         if (cy >= dx) {
             if (cz > cy) {
@@ -182,19 +201,28 @@ void main() {
 
         uint checkId = xyzToIndex(x, y, z);
         if(testVox(checkChunk, checkId) != 0 && t > 1) {
-            v = 0; /* tmp */
+            if (t == 2) {
+                return;
+            } else {
+                hitBrightness = getBrightness(checkChunk, checkId);
+            }
+            hit = true;
             break;
         }
 
         t += 1;
     }
 
+    if (hit == false) {
+        //todo: evaluate sky light in this direction
+        hitBrightness = uint(max(0, -dot(vec3(lightDir), rayDir) * 255));
+    }
     uint quantizedNormal = getQuantizedNormal(thisChunk, id);
     vec3 normal = normalPalette[quantizedNormal];
-    vec3 lightDir = -vec3(rayDir);
-    float normalLightingCompoent = -dot(normal, lightDir);
-    normalLightingCompoent = max(0, normalLightingCompoent);
-    v *= normalLightingCompoent;
-    uint light = int(round(v * 255));
-    setBrightness(thisChunk, id, light);
+
+    //hitBrightness = max(hitBrightness, oldBrightness); // temp
+    float normalWeight = max(0, dot(normal, rayDir));
+    uint newBrightness
+        = uint(float(oldBrightness) * 29/30 + float(hitBrightness) * normalWeight * 1/30);
+    setBrightness(thisChunk, id, newBrightness);
 }

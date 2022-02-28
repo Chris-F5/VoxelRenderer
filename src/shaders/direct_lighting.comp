@@ -1,0 +1,199 @@
+#version 450
+
+#include "chunk.glsl"
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(push_constant) uniform Constants {
+    uint thisChunk;
+    uint CHUNK_SCALE;
+    uint CHUNK_VOX_COUNT;
+    vec4 lightDir;
+};
+
+layout(binding = 0) buffer Brightness {
+    uint brightnessData[];
+};
+layout(binding = 1) buffer VoxMask {
+    uint voxMaskData[];
+};
+layout(binding = 2) buffer Neighbours {
+    uint neighboursData[];
+};
+layout(binding = 3) buffer Normals {
+    uint normalData[];
+};
+
+void setBrightness(uint chunk, uint index, uint brightness)
+{
+    brightnessData[index + (chunk * CHUNK_VOX_COUNT)] = brightness * 256 * 256 * 256;
+}
+
+uint getQuantizedNormal(uint chunk, uint index)
+{
+    return (normalData[index / 4 + (chunk * CHUNK_VOX_COUNT / 4)] >> (index % 4) * 8) & 0xFF;
+}
+
+uint testVox(uint chunk, uint index)
+{
+    return voxMaskData[index / 32 + (chunk * CHUNK_VOX_COUNT / 32)] & (1 << index % 32);
+}
+
+uint getNeighbour(uint chunk, uint neighbourDir)
+{
+    return neighboursData[chunk * 6 + neighbourDir];
+}
+
+uint xyzToIndex(uint x, uint y, uint z)
+{
+    return x
+        + y * CHUNK_SCALE
+        + z * CHUNK_SCALE * CHUNK_SCALE;
+}
+
+
+void main() {
+    int dx = int(round(-lightDir.x * 512));
+    int dy = int(round(-lightDir.y * 512));
+    int dz = int(round(-lightDir.z * 512));
+    uint dirMask = 0;
+    if (dx < 0) {
+        dirMask |= 1;
+        dx = -dx;
+    }
+    if (dy < 0) {
+        dirMask |= 2;
+        dy = -dy;
+    }
+    if (dz < 0) {
+        dirMask |= 4;
+        dz = -dz;
+    }
+
+    int x = int(gl_WorkGroupID.x);
+    int y = int(gl_WorkGroupID.y);
+    int z = int(gl_WorkGroupID.z);
+
+    uint id = xyzToIndex(x, y, z);
+
+    uint checkChunk = thisChunk;
+
+    float v = 1;
+    uint t = 0;
+    uint cy = dy; /* cy / dx = subvox y coord */
+    uint cz = dz; /* cz / dx - subvox z coord */
+    while (t < 612) {
+        if (cy >= dx) {
+            if (cz > cy) {
+                if (dx == 0) {
+                    cy += dy;
+                } else {
+                    cz -= dx;
+                }
+                if ((dirMask & 4) == 0) {
+                    z += 1;
+                    if (z >= CHUNK_SCALE) {
+                        z = 0;
+                        checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_Z);
+                        if (checkChunk == NEIGHBOUR_EMPTY) {
+                            break;
+                        }
+                    }
+                } else {
+                    z -= 1;
+                    if (z < 0) {
+                        z = int(CHUNK_SCALE) - 1;
+                        checkChunk = getNeighbour(checkChunk, NEIGHBOUR_NEGATIVE_Z);
+                        if (checkChunk == NEIGHBOUR_EMPTY) {
+                            break;
+                        }
+                    }
+                }
+            } else {
+                if (dx == 0) {
+                    cz += dz;
+                } else {
+                    cy -= dx;
+                }
+                if ((dirMask & 2) == 0) {
+                    y += 1;
+                    if (y >= CHUNK_SCALE) {
+                        y = 0;
+                        checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_Y);
+                        if (checkChunk == NEIGHBOUR_EMPTY) {
+                            break;
+                        }
+                    }
+                } else {
+                    y -= 1;
+                    if (y < 0) {
+                        y = int(CHUNK_SCALE) - 1;
+                        checkChunk = getNeighbour(checkChunk, NEIGHBOUR_NEGATIVE_Y);
+                        if (checkChunk == NEIGHBOUR_EMPTY) {
+                            break;
+                        }
+                    }
+                }
+            }
+        } else if (cz >= dx) {
+            cz -= dx;
+            if ((dirMask & 4) == 0) {
+                z += 1;
+                if (z >= CHUNK_SCALE) {
+                    z = 0;
+                    checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_Z);
+                    if (checkChunk == NEIGHBOUR_EMPTY) {
+                        break;
+                    }
+                }
+            } else {
+                z -= 1;
+                if (z < 0) {
+                    z = int(CHUNK_SCALE) - 1;
+                    checkChunk = getNeighbour(checkChunk, NEIGHBOUR_NEGATIVE_Z);
+                    if (checkChunk == NEIGHBOUR_EMPTY) {
+                        break;
+                    }
+                }
+            }
+        } else {
+            cy += dy;
+            cz += dz;
+            if ((dirMask & 1) == 0) {
+                x += 1;
+                if (x >= CHUNK_SCALE) {
+                    x = 0;
+                    checkChunk = getNeighbour(checkChunk, NEIGHBOUR_POSITIVE_X);
+                    if (checkChunk == NEIGHBOUR_EMPTY) {
+                        break;
+                    }
+                }
+            } else {
+                x -= 1;
+                if (x < 0) {
+                    x = int(CHUNK_SCALE) - 1;
+                    checkChunk = getNeighbour(checkChunk, NEIGHBOUR_NEGATIVE_X);
+                    if (checkChunk == NEIGHBOUR_EMPTY) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        uint checkId = xyzToIndex(x, y, z);
+        if(testVox(checkChunk, checkId) != 0 && t > 1) {
+            v = 0; /* tmp */
+            break;
+        }
+
+        t += 1;
+    }
+
+    uint quantizedNormal = getQuantizedNormal(thisChunk, id);
+    vec3 normal = normalPalette[quantizedNormal];
+    float normalLightingCompoent = -dot(normal, vec3(lightDir));
+    normalLightingCompoent = max(0, normalLightingCompoent);
+    v *= normalLightingCompoent;
+    uint light = int(round(v * 255));
+    setBrightness(thisChunk, id, light);
+}
