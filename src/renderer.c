@@ -10,10 +10,7 @@
 #include "vk_utils/image.h"
 #include "vk_utils/shader_module.h"
 
-#include "./debug_lines.h"
-#include "./models.h"
 #include "./utils.h"
-#include "vulkan_device.h"
 
 static void createSwapchain(
     VkDevice logicalDevice,
@@ -921,7 +918,7 @@ void Renderer_init(
         &renderer->debugLineStorage,
         device->logical,
         device->physical,
-        200);
+        2000);
 
     /* RENDER PASS */
     createRenderPass(

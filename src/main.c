@@ -119,6 +119,70 @@ int main()
         }
     }
 
+    /* CHUNK BORDER DEBUG LINES */
+    {
+        DebugLineVertex* verts = (DebugLineVertex*)malloc(
+            chunkStorage.idAllocator.count * 24 * sizeof(DebugLineVertex));
+        vec3 color = { 1.0f, 0.0f, 0.0f };
+        for (uint32_t c = 0; c < chunkStorage.idAllocator.count; c++) {
+            int32_t x = chunkStorage.positions[c][0] * CHUNK_SCALE;
+            int32_t y = chunkStorage.positions[c][1] * CHUNK_SCALE;
+            int32_t z = chunkStorage.positions[c][2] * CHUNK_SCALE;
+            for (uint32_t i = 0; i < 24; i++) {
+                verts[c * 24 + i].pos[0] = x;
+                verts[c * 24 + i].pos[1] = y;
+                verts[c * 24 + i].pos[2] = z;
+                glm_vec3_copy(color, verts[c * 24 + i].color);
+            }
+            verts[c * 24 + 1].pos[0] += CHUNK_SCALE;
+            verts[c * 24 + 3].pos[1] += CHUNK_SCALE;
+            verts[c * 24 + 5].pos[2] += CHUNK_SCALE;
+
+            verts[c * 24 + 6].pos[0] += CHUNK_SCALE;
+            verts[c * 24 + 7].pos[0] += CHUNK_SCALE;
+            verts[c * 24 + 7].pos[1] += CHUNK_SCALE;
+            verts[c * 24 + 8].pos[0] += CHUNK_SCALE;
+            verts[c * 24 + 9].pos[0] += CHUNK_SCALE;
+            verts[c * 24 + 9].pos[2] += CHUNK_SCALE;
+
+            verts[c * 24 + 10].pos[1] += CHUNK_SCALE;
+            verts[c * 24 + 11].pos[1] += CHUNK_SCALE;
+            verts[c * 24 + 11].pos[0] += CHUNK_SCALE;
+            verts[c * 24 + 12].pos[1] += CHUNK_SCALE;
+            verts[c * 24 + 13].pos[1] += CHUNK_SCALE;
+            verts[c * 24 + 13].pos[2] += CHUNK_SCALE;
+
+            verts[c * 24 + 14].pos[2] += CHUNK_SCALE;
+            verts[c * 24 + 15].pos[2] += CHUNK_SCALE;
+            verts[c * 24 + 15].pos[0] += CHUNK_SCALE;
+            verts[c * 24 + 16].pos[2] += CHUNK_SCALE;
+            verts[c * 24 + 17].pos[2] += CHUNK_SCALE;
+            verts[c * 24 + 17].pos[1] += CHUNK_SCALE;
+
+            verts[c * 24 + 18].pos[0] += CHUNK_SCALE;
+            verts[c * 24 + 18].pos[1] += CHUNK_SCALE;
+            verts[c * 24 + 18].pos[2] += CHUNK_SCALE;
+            verts[c * 24 + 19].pos[0] += CHUNK_SCALE;
+            verts[c * 24 + 19].pos[1] += CHUNK_SCALE;
+            verts[c * 24 + 20].pos[0] += CHUNK_SCALE;
+            verts[c * 24 + 20].pos[1] += CHUNK_SCALE;
+            verts[c * 24 + 20].pos[2] += CHUNK_SCALE;
+            verts[c * 24 + 21].pos[0] += CHUNK_SCALE;
+            verts[c * 24 + 21].pos[2] += CHUNK_SCALE;
+            verts[c * 24 + 22].pos[0] += CHUNK_SCALE;
+            verts[c * 24 + 22].pos[1] += CHUNK_SCALE;
+            verts[c * 24 + 22].pos[2] += CHUNK_SCALE;
+            verts[c * 24 + 23].pos[1] += CHUNK_SCALE;
+            verts[c * 24 + 23].pos[2] += CHUNK_SCALE;
+
+        }
+        DebugLineStorage_update(
+            &renderer.debugLineStorage,
+            device.logical,
+            chunkStorage.idAllocator.count * 24,
+            verts);
+    }
+
     /* CHUNK NORMAL GEN */
     NormalGen normalGen;
     {

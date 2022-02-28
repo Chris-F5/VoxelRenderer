@@ -171,9 +171,9 @@ setColor(palette, 0 , green)
 
 f = beginFile("object1.svo", palette)
 
-sphereGenInfo = sphere(8)
-noiseGenInfo = simplex(64, 10)
+sphereGenInfo = sphere(16)
+noiseGenInfo = simplex(64, 15)
 generateObject(f, sphereGenInfo, 0, 0, 0)
-generateObject(f, noiseGenInfo, 1, 0, 0)
+generateObject(f, noiseGenInfo, 3, 0, 0)
 
 f.close()
