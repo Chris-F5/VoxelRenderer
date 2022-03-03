@@ -420,6 +420,11 @@ void VulkanDevice_init(VulkanDevice* device, GLFWwindow* window)
 
 void VulkanDevice_destroy(VulkanDevice* device)
 {
+    vkDestroyCommandPool(device->logical, device->graphicsCommandPool, NULL);
+    vkDestroyCommandPool(
+        device->logical,
+        device->transientGraphicsCommandPool,
+        NULL);
     vkDestroyDevice(device->logical, NULL);
     vkDestroySurfaceKHR(device->instance, device->surface, NULL);
     destroyDebugMessenger(device->instance, &device->debugMessenger);

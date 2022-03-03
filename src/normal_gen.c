@@ -274,6 +274,8 @@ void NormalGen_init(
                 NULL,
                 &normalGen->pipeline),
             "creating normal gen pipeline");
+
+        vkDestroyShaderModule(logicalDevice, shaderModule, NULL);
     }
 
     /* ALLOCATE COMMAND BUFFER */

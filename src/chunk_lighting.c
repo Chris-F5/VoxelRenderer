@@ -328,6 +328,8 @@ void ChunkLighting_init(
                 &lighting->directPipeline),
             "creating direct lighting pipeline");
 
+        vkDestroyShaderModule(logicalDevice, shaderModule, NULL);
+
         createShaderModule(
             logicalDevice,
             "diffuse_lighting.comp.spv",
@@ -344,6 +346,8 @@ void ChunkLighting_init(
                 NULL,
                 &lighting->diffusePipeline),
             "creating diffuse lighting pipeline");
+
+        vkDestroyShaderModule(logicalDevice, shaderModule, NULL);
     }
 
     /* ALLOCATE COMMAND BUFFERS */
