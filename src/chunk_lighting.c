@@ -269,7 +269,7 @@ void ChunkLighting_init(
         pipelineLayoutCreateInfo.flags = 0;
         pipelineLayoutCreateInfo.setLayoutCount
             = sizeof(descriptorSetsLayouts) / sizeof(descriptorSetsLayouts[0]);
-        pipelineLayoutCreateInfo.pSetLayouts = &lighting->descriptorSetLayout;
+        pipelineLayoutCreateInfo.pSetLayouts = descriptorSetsLayouts;
         pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
         pipelineLayoutCreateInfo.pPushConstantRanges = &directLightingPushConstant;
 

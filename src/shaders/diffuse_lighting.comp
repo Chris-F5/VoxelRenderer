@@ -24,15 +24,14 @@ layout(binding = 2) buffer Neighbours {
 layout(binding = 3) buffer Normals {
     uint normalData[];
 };
-
 void setBrightness(uint chunk, uint index, uint brightness)
 {
-    brightnessData[index + (chunk * CHUNK_VOX_COUNT)] = brightness * 256 * 256 * 256;
+    brightnessData[index + (chunk * CHUNK_VOX_COUNT)] = brightness;
 }
 
 uint getBrightness(uint chunk, uint index)
 {
-    return brightnessData[index + (chunk * CHUNK_VOX_COUNT)] / (256 * 256 * 256);
+    return brightnessData[index + (chunk * CHUNK_VOX_COUNT)];
 }
 
 uint getQuantizedNormal(uint chunk, uint index)
@@ -58,6 +57,7 @@ uint xyzToIndex(uint x, uint y, uint z)
 }
 
 uint currentSeed;
+float convergence = 500.0;
 
 uint randomByte()
 {
@@ -75,8 +75,9 @@ void main() {
     int y = int(gl_WorkGroupID.y);
     int z = int(gl_WorkGroupID.z);
     uint id = xyzToIndex(x, y, z);
-    currentSeed = randomSeed + x * CHUNK_SCALE + y * CHUNK_SCALE * CHUNK_SCALE + z * CHUNK_VOX_COUNT;
     uint oldBrightness = getBrightness(thisChunk, id);
+
+    currentSeed = randomSeed + x * CHUNK_SCALE + y * CHUNK_SCALE * CHUNK_SCALE + z * CHUNK_VOX_COUNT;
 
     uint dx = randomByte();
     uint dy = randomByte();
@@ -215,7 +216,7 @@ void main() {
 
     if (hit == false) {
         //todo: evaluate sky light in this direction
-        hitBrightness = uint(max(0, -dot(vec3(lightDir), rayDir) * 255));
+        hitBrightness = uint(max(0, -dot(vec3(lightDir), rayDir) * UINT16_MAX));
     }
     uint quantizedNormal = getQuantizedNormal(thisChunk, id);
     vec3 normal = normalPalette[quantizedNormal];
@@ -223,6 +224,6 @@ void main() {
     //hitBrightness = max(hitBrightness, oldBrightness); // temp
     float normalWeight = max(0, dot(normal, rayDir));
     uint newBrightness
-        = uint(float(oldBrightness) * 29/30 + float(hitBrightness) * normalWeight * 1/30);
+        = uint((float(oldBrightness) * (convergence-1.0) + float(hitBrightness) * normalWeight) / convergence);
     setBrightness(thisChunk, id, newBrightness);
 }

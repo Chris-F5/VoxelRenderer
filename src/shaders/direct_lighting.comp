@@ -26,7 +26,7 @@ layout(binding = 3) buffer Normals {
 
 void setBrightness(uint chunk, uint index, uint brightness)
 {
-    brightnessData[index + (chunk * CHUNK_VOX_COUNT)] = brightness * 256 * 256 * 256;
+    brightnessData[index + (chunk * CHUNK_VOX_COUNT)] = brightness;
 }
 
 uint getQuantizedNormal(uint chunk, uint index)
@@ -194,6 +194,6 @@ void main() {
     float normalLightingCompoent = -dot(normal, vec3(lightDir));
     normalLightingCompoent = max(0, normalLightingCompoent);
     v *= normalLightingCompoent;
-    uint light = int(round(v * 255));
+    uint light = int(round(v * UINT16_MAX));
     setBrightness(thisChunk, id, light);
 }

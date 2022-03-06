@@ -659,12 +659,12 @@ static void createRenderCommandBuffers(
     VkPipelineLayout voxTriPipelineLayout,
     VkPipeline debugLinePipeline,
     VkPipelineLayout debugLinePipelineLayout,
-    const ModelStorage* modelStorage,
-    const DebugLineStorage* debugLines,
+    ModelStorage* modelStorage,
+    DebugLineStorage* debugLines,
     VkCommandPool pool,
     uint32_t swapLen,
-    const VkDescriptorSet* cameraDescriptorSets,
-    const VkFramebuffer* framebuffers,
+    VkDescriptorSet* cameraDescriptorSets,
+    VkFramebuffer* framebuffers,
     VkCommandBuffer* commandBuffers)
 {
     /* ALLOCATE COMMAND BUFFERS */
@@ -801,7 +801,7 @@ static void createRenderCommandBuffers(
 
 void Renderer_init(
     Renderer* renderer,
-    const VulkanDevice* device,
+    VulkanDevice* device,
     VkExtent2D presentExtent)
 {
     renderer->presentExtent = presentExtent;
@@ -1109,7 +1109,7 @@ void Renderer_recreateCommandBuffers(
 
 void Renderer_drawFrame(
     Renderer* renderer,
-    const VulkanDevice* device,
+    VulkanDevice* device,
     CameraRenderData cameraData)
 {
     handleVkResult(

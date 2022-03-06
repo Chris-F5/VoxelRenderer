@@ -9,6 +9,7 @@ typedef struct {
     VkDescriptorPool descriptorPool;
     VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorSet descriptorSet;
+
     VkPipelineLayout directPipelineLayout;
     VkPipeline directPipeline;
     VkCommandBuffer directCommandBuffer;

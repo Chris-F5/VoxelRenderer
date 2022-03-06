@@ -216,14 +216,14 @@ int main()
         vec4 lightDir = { -1.0f, -2.0f, -1.5f };
         glm_vec3_normalize(lightDir);
 
-        ChunkLighting_directLightingPass(
+        /*ChunkLighting_directLightingPass(
             &chunkLighting,
             device.logical,
             device.graphicsQueue,
             chunkStorage.idAllocator.count,
             allChunks,
-            lightDir);
-        for (int i = 0; i < 100; i++) {
+            lightDir);*/
+        for (int i = 0; i < 1000; i++) {
             ChunkLighting_diffuseLightingPass(
                 &chunkLighting,
                 device.logical,
@@ -231,6 +231,8 @@ int main()
                 chunkStorage.idAllocator.count,
                 allChunks,
                 lightDir);
+            if (i % 10 == 0)
+                printf("%d\n", i);
         }
     }
 
@@ -323,4 +325,5 @@ int main()
     ChunkGpuStorage_destroy(&chunkGpuStorage, device.logical);
     VoxPaletteStorage_destroy(&paletteStorage);
     Renderer_destroy(&renderer, device.logical);
+    VulkanDevice_destroy(&device);
 }

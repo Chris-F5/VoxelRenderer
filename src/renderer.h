@@ -75,7 +75,7 @@ typedef struct {
 
 void Renderer_init(
     Renderer* renderer,
-    const VulkanDevice* device,
+    VulkanDevice* device,
     VkExtent2D presentExtent);
 
 void Renderer_recreateCommandBuffers(
@@ -84,7 +84,7 @@ void Renderer_recreateCommandBuffers(
 
 void Renderer_drawFrame(
     Renderer* renderer,
-    const VulkanDevice* device,
+    VulkanDevice* device,
     CameraRenderData cameraData);
 
 void Renderer_destroy(

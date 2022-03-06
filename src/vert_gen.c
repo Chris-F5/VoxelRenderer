@@ -130,11 +130,11 @@ void ChunkVertGen_generate(ChunkVertGen* vertGen,
             uint32_t brightness = chunkBrightness[i];
             vec3 color;
             color[0] = colorPalette[chunkColors[i]][0]
-                * ((float)brightness / (float)UINT32_MAX);
+                * ((float)brightness / (float)UINT16_MAX);
             color[1] = colorPalette[chunkColors[i]][1]
-                * ((float)brightness / (float)UINT32_MAX);
+                * ((float)brightness / (float)UINT16_MAX);
             color[2] = colorPalette[chunkColors[i]][2]
-                * ((float)brightness / (float)UINT32_MAX);
+                * ((float)brightness / (float)UINT16_MAX);
 
             if (x == 0
                 || testBit(chunkBitMask, xyzToChunkIndex(x - 1, y, z)) == 0) {
