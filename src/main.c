@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 
 #include <cglm/cglm.h>
+#include <sys/time.h>
 
 #include "./camera.h"
 #include "./chunk_lighting.h"
@@ -174,7 +175,6 @@ int main()
             verts[c * 24 + 22].pos[2] += CHUNK_SCALE;
             verts[c * 24 + 23].pos[1] += CHUNK_SCALE;
             verts[c * 24 + 23].pos[2] += CHUNK_SCALE;
-
         }
         DebugLineStorage_update(
             &renderer.debugLineStorage,
@@ -223,7 +223,7 @@ int main()
             chunkStorage.idAllocator.count,
             allChunks,
             lightDir);*/
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 100; i++) {
             ChunkLighting_diffuseLightingPass(
                 &chunkLighting,
                 device.logical,
@@ -231,8 +231,6 @@ int main()
                 chunkStorage.idAllocator.count,
                 allChunks,
                 lightDir);
-            if (i % 10 == 0)
-                printf("%d\n", i);
         }
     }
 
@@ -298,15 +296,70 @@ int main()
         camera.pitch = -20;
     }
 
+    struct timeval lastFrameTime;
+    gettimeofday(&lastFrameTime, NULL);
+    uint32_t frameTimeRollingIndex = 0;
+    double frameTimeRollingSum = 0;
     /* MAIN LOOP */
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         Camera_userInput(&camera, window);
 
+        {
+            vec4 lightDir = { -1.0f, -2.0f, -1.5f };
+            glm_vec3_normalize(lightDir);
+            ChunkLighting_diffuseLightingPass(
+                &chunkLighting,
+                device.logical,
+                device.graphicsQueue,
+                chunkStorage.idAllocator.count,
+                allChunks,
+                lightDir);
+        }
+        {
+            ChunkRef chunk;
+            if (IdAllocator_first(&chunkStorage.idAllocator, &chunk)) {
+                do {
+                    ChunkVertGen_generate(
+                        &vertGen,
+                        &chunkStorage,
+                        &chunkGpuStorage,
+                        device.logical,
+                        chunk,
+                        &paletteStorage,
+                        chunkPalette);
+
+                    ModelStorage_updateVertexData(
+                        &renderer.modelStorage,
+                        device.logical,
+                        models[chunk],
+                        vertGen.vertCount,
+                        vertGen.vertBuffer);
+                } while (IdAllocator_next(&chunkStorage.idAllocator, chunk, &chunk));
+
+                Renderer_recreateCommandBuffers(&renderer, &device);
+            }
+        }
+
         CameraRenderData camData;
         Camera_viewMat(&camera, camData.view);
         Camera_projMat(&camera, camData.proj);
         Renderer_drawFrame(&renderer, &device, camData);
+
+        struct timeval thisFrameTime;
+        gettimeofday(&thisFrameTime, NULL);
+        double delta
+            = (thisFrameTime.tv_sec - lastFrameTime.tv_sec) * 1000.0
+            + (thisFrameTime.tv_usec - lastFrameTime.tv_usec) / 1000.0;
+        lastFrameTime = thisFrameTime;
+        frameTimeRollingSum += delta;
+        frameTimeRollingIndex++;
+        if (frameTimeRollingIndex == 30) {
+            double averageFrameTime = frameTimeRollingSum / 30.0;
+            printf("%.1f millisecond frame time\n", averageFrameTime);
+            frameTimeRollingIndex = 0;
+            frameTimeRollingSum = 0;
+        }
     }
 
     free(allChunks);

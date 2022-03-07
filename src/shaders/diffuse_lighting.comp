@@ -57,7 +57,7 @@ uint xyzToIndex(uint x, uint y, uint z)
 }
 
 uint currentSeed;
-float convergence = 500.0;
+float convergence = 100.0;
 
 uint randomByte()
 {
